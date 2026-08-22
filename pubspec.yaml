@@ -1,0 +1,79 @@
+name: imoss
+description: imoss mobile and web app
+
+publish_to: "none"
+
+version: 1.2.2+1
+
+environment:
+  sdk: ">=3.2.3 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  animated_toggle_switch:
+  badges:
+  camera:
+  cupertino_icons:
+  datetime_picker_formfield_new:
+  device_info_plus:
+  dotted_line:
+  dropdown_search:
+  file_picker:
+  firebase_auth:
+  firebase_core:
+  firebase_crashlytics:
+  firebase_messaging:
+  flutter_reorderable_grid_view:
+  flutter_secure_storage:
+  flutter_svg:
+  flutter_staggered_grid_view:
+  fluttertoast:
+  get:
+  geolocator:
+  google_fonts:
+  hive:
+  hive_flutter:
+  image_picker:
+  intl:
+  loading_animation_widget:
+  local_auth:
+  location:
+  logger:
+  package_info_plus:
+  permission_handler:
+  pin_code_fields:
+  path:
+  speech_to_text:
+  syncfusion_flutter_signaturepad:
+  uuid:
+  video_player:
+  url_launcher:
+  shared_preferences:
+  clipboard:
+  share_plus:
+  flutter_smart_dialog:
+  path_provider:
+  flutter_pdfview:
+  image_picker_for_web:
+  razorpay_flutter:
+  
+dev_dependencies:
+  build_runner: null
+  flutter_lints: null
+  flutter_test:
+    sdk: flutter
+  hive_generator: null
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - resources/icons/
+    - resources/images/
+    - resources/vehicle/
+    - resources/avatar/
+    - resources/logo/
+    - resources/pdf/
+    - resources/form-json/
+    - pubspec.yaml
