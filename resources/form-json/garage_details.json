@@ -1,0 +1,28 @@
+[
+    {
+        "id": "1",
+        "key": "garageName",
+        "description": "Garage Name",
+        "type": "INPUT",
+        "labelText": "Garage Name",
+        "hintText": "Garage Name",
+        "isShow": true,
+        "isFreeze": false,
+        "validation": "STR",
+        "inputValue": "Yogesh Automobile",
+        "inputOption": ""
+    },
+    {
+        "id": "2",
+        "key": "city",
+        "description": "City",
+        "type": "INPUT",
+        "labelText": "City",
+        "hintText": "City",
+        "isShow": true,
+        "isFreeze": false,
+        "validation": "STR",
+        "inputValue": "",
+        "inputOption": ""
+    }
+]
