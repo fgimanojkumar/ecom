@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:imoss/shared/style/app_colors.dart';
 import 'package:imoss/shared/widgets/app_toast.dart';
 
 class CouponController extends GetxController {

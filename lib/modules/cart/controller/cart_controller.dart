@@ -221,16 +221,19 @@ class CartController extends GetxController {
   // Reads applied coupon from CouponController and computes % discount
   double get couponDiscount {
     try {
-      final cc = Get.find<dynamic>(tag: 'CouponController') as dynamic;
-      final code = (cc.appliedCouponCode as dynamic).value as String;
+      if (!Get.isRegistered<CouponController>()) return 0;
+      final cc = Get.find<CouponController>();
+      final code = cc.appliedCouponCode.value;
       if (code.isEmpty) return 0;
-      final coupon = (cc.coupons as List)
-          .cast<Map<String, dynamic>>()
-          .firstWhere((c) => c['code'] == code,
-              orElse: () => <String, dynamic>{});
+      final coupon = cc.coupons.firstWhere(
+        (c) => c['code'] == code,
+        orElse: () => <String, dynamic>{},
+      );
       if (coupon.isEmpty) return 0;
-      final pct = double.tryParse((coupon['discount'] as String? ?? '')
-              .replaceAll(RegExp(r'[^0-9.]'), '')) ??
+      final pct = double.tryParse(
+            (coupon['discount'] as String? ?? '')
+                .replaceAll(RegExp(r'[^0-9.]'), ''),
+          ) ??
           0;
       return subtotal * pct / 100;
     } catch (_) {

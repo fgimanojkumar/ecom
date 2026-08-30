@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import 'modules/settings/controller/theme_controller.dart';
 import 'routes/app_pages.dart';
 import 'shared/style/app_style.dart';
 
@@ -14,6 +15,8 @@ class InitApp extends StatelessWidget {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
+    Get.put(ThemeController(), permanent: true);
 
     return GetMaterialApp(
       color: AppColors.white,

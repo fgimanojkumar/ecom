@@ -12,8 +12,8 @@ abstract class AppColors {
   static const Color buttonColor = Color(0xFF0F6B43);
   static const Color opacityColor = Color(0x330F6B43);
 
-  // Gradient helpers (use as list in LinearGradient)
-  static const Color gradientStart = Color(0xFF0F6B43);
+  // Gradient helpers — blue → green
+  static const Color gradientStart = Color(0xFF1A56DB);
   static const Color gradientEnd = Color(0xFF37C87A);
 
   // Text / neutral colors

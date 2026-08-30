@@ -14,12 +14,15 @@ import '../modules/forgotpassword/binding/forgotpassword_binding.dart';
 import '../modules/forgotpassword/view/forgotpassword_view.dart';
 import '../modules/home/binding/home_binding.dart';
 import '../modules/home/view/home_view.dart';
-import '../modules/home/binding/categories_binding.dart';
-import '../modules/home/view/categories_view.dart';
+import '../modules/categories/binding/categories_binding.dart';
+import '../modules/categories/view/categories_view.dart';
+import '../modules/subcategories/binding/sub_categories_binding.dart';
+import '../modules/subcategories/view/sub_categories_view.dart';
 import '../modules/invite_friends/bindings/invite_friends_binding.dart';
 import '../modules/invite_friends/view/invite_friends_view.dart';
 import '../modules/product/binding/product_binding.dart';
-import '../modules/product/view/product_details_view.dart';
+import '../modules/product_details/view/product_details_view.dart';
+import '../modules/product_details/binding/product_details_binding.dart';
 import '../modules/cart/binding/cart_binding.dart';
 import '../modules/cart/view/cart_view.dart';
 import '../modules/checkout/binding/checkout_binding.dart';
@@ -69,11 +72,7 @@ class AppPages {
       page: () => const App(),
       binding: AppBinding(),
     ),
-    GetPage(
-      name: AppRoutes().syncMaster,
-      page: () => CategoriesView(),
-      binding: SyncBinding(),
-    ),
+
     GetPage(
       name: AppRoutes().login,
       page: () => const LoginView(),
@@ -134,12 +133,12 @@ class AppPages {
     GetPage(
       name: AppRoutes().productDetails,
       page: () => const ProductDetailsView(),
-      binding: ProductBinding(),
+      binding: ProductDetailsBinding(),
     ),
     GetPage(
       name: AppRoutes().reviews,
       page: () => const ProductDetailsView(),
-      binding: ProductBinding(),
+      binding: ProductDetailsBinding(),
     ),
     GetPage(
       name: AppRoutes().cart,
@@ -228,13 +227,13 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes().categories,
-      page: () => CategoriesView(),
+      page: () => const CategoriesView(),
       binding: CategoriesBinding(),
     ),
     GetPage(
       name: AppRoutes().subcategories,
-      page: () => CategoriesView(),
-      binding: CategoriesBinding(),
+      page: () => const SubCategoriesView(),
+      binding: SubCategoriesBinding(),
     ),
     GetPage(
       name: AppRoutes().orderConfirmation,

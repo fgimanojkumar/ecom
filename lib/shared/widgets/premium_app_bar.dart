@@ -88,22 +88,10 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   void _handleSafeBack(BuildContext context) {
-    if (Get.key.currentState?.canPop() ?? false) {
-      Get.back();
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
       return;
     }
-
-    final navigator = Navigator.maybeOf(context);
-    if (navigator?.canPop() ?? false) {
-      navigator!.pop();
-      return;
-    }
-
-    if (Get.previousRoute.isNotEmpty && Get.previousRoute != Get.currentRoute) {
-      Get.offNamed(Get.previousRoute);
-      return;
-    }
-
     Get.offAllNamed('/home');
   }
 

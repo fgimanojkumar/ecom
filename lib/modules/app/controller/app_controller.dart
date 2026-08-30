@@ -20,6 +20,5 @@ class AppController extends GetxController {
     localStorage.removeStorageItem(FlutterStorageKeys().userId);
     localStorage.removeStorageItem(FlutterStorageKeys().token);
     Get.offAllNamed(AppRoutes().login);
-    Get.back();
   }
 }

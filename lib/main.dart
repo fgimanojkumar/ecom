@@ -7,10 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/adapters.dart';
 import '@config/app_config.dart';
 
-import 'data/database/adhocData/adapter/local_adhoc_data.dart';
-import 'data/database/documents/adapter/local_claim_documents.dart';
 import 'data/database/hive_adapter.dart';
-import 'data/database/master/adapter/licensed_surveyor.dart';
 import 'environment/environment.dart';
 import 'init_app.dart';
 
@@ -29,16 +26,7 @@ Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
 
   ///*************** HIVE INITIALIZATION ***************///
   await Hive.initFlutter();
-  Hive.registerAdapter(LocalTCSClaimListAdapter());
-  Hive.registerAdapter(LocalClaimDataDtoAdapter());
-  Hive.registerAdapter(LocalAddOnAdapter());
-  Hive.registerAdapter(LocalClaimHistoryAdapter());
-  Hive.registerAdapter(LocalCommentReviewRemarkAdapter());
   Hive.registerAdapter(UserProfileAdapter());
-  Hive.registerAdapter(PartMasterAdapter());
-  Hive.registerAdapter(LicensedSurveyorAdapter());
-  Hive.registerAdapter(LocalClaimDocumentsAdapter());
-  Hive.registerAdapter(LocalAdhocDataAdapter());
 
   ///************ END HIVE INITIALIZATION ************///
 

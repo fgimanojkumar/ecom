@@ -11,14 +11,35 @@ class HomeController extends GetxController {
   final searchQuery = ''.obs;
   final currentBannerIndex = 0.obs;
   final isDrawerOpen = false.obs;
+  final currentHintIndex = 0.obs;
   late PageController bannerPageController;
   Timer? _bannerTimer;
+  Timer? _hintTimer;
+
+  static const _searchHints = [
+    'Search earphones...',
+    'Search watches...',
+    'Search sneakers...',
+    'Search clothing...',
+    'Search electronics...',
+    'Search accessories...',
+  ];
+
+  String get currentSearchHint => _searchHints[currentHintIndex.value];
 
   @override
   void onInit() {
     super.onInit();
     bannerPageController = PageController(viewportFraction: 1);
     _startBannerAutoSlide();
+    _startHintCycling();
+  }
+
+  void _startHintCycling() {
+    _hintTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      currentHintIndex.value =
+          (currentHintIndex.value + 1) % _searchHints.length;
+    });
   }
 
   void _startBannerAutoSlide() {
@@ -38,6 +59,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _bannerTimer?.cancel();
+    _hintTimer?.cancel();
     bannerPageController.dispose();
     super.onClose();
   }
@@ -46,22 +68,22 @@ class HomeController extends GetxController {
     {
       'name': 'Dresses',
       'image':
-          'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=200',
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpQQJkX4QxVH-28D1eFJ_RP7evdCNcec4wTA9wDIUwlw&s=10',
     },
     {
       'name': 'Shoes',
       'image':
-          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200',
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQp1r-hUHhLxHH_FzhvaaLdVER5q7-25qL9Acruqmw8aQ&s=10',
     },
     {
       'name': 'Bags',
       'image':
-          'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=200',
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIJ4tsK-5-am7SRNPPnw4HNrBxOLFQOv0ihrH2AhNTCA&s=10',
     },
     {
       'name': 'Watches',
       'image':
-          'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200',
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7JjYbO4WJg6QXPLdvkdg16La0KeBP5cBXq0lyO_Y2iw&s=10',
     },
     {
       'name': 'Jewelry',
@@ -290,9 +312,11 @@ class HomeController extends GetxController {
     },
   ].obs;
 
-  // Emergency banner — set showEmergencyBanner = true and fill message to display
-  final emergencyMessage = ''.obs;
-  final showEmergencyBanner = false.obs;
+  // Set showEmergencyBanner = true and fill message to display a notice below the slider
+  final emergencyMessage =
+      '🚚 Delivery delays expected in some areas. Orders may take 1-2 extra days.'
+          .obs;
+  final showEmergencyBanner = true.obs;
 
   List<Map<String, dynamic>> get topProducts =>
       featuredProducts.take(4).toList();

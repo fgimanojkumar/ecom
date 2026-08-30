@@ -1,9 +1,1 @@
-import 'package:get/get.dart';
-import '../controller/categories_controller.dart';
-
-class CategoriesBinding extends Bindings {
-  @override
-  void dependencies() {
-    Get.put(CategoriesController());
-  }
-}
+﻿// moved to lib/modules/categories/binding/

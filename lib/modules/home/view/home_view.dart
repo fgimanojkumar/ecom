@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -295,6 +295,93 @@ class HomeView extends GetView<HomeController> {
                               ),
                             ),
                             // ─── [1] BANNER SLIDER END ───────────────────────────
+
+                            // Emergency message below slider — controlled by showEmergencyBanner
+                            Obx(() => controller.showEmergencyBanner.value
+                                ? Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 10, 16, 0),
+                                    child: _EmergencyBanner(
+                                      message:
+                                          controller.emergencyMessage.value,
+                                      onClose: () => controller
+                                          .showEmergencyBanner.value = false,
+                                    ),
+                                  )
+                                : const SizedBox.shrink()),
+
+                            const SizedBox(height: 12),
+
+                            // ─── Social proof bar ────────────────────────────────
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.primary1.withOpacity(0.05),
+                                      AppColors.gradientEnd.withOpacity(0.05),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color:
+                                          AppColors.primary1.withOpacity(0.12)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    const _ProofItem(
+                                        icon: Icons.people_rounded,
+                                        label: '50K+',
+                                        sub: 'Customers'),
+                                    _proofDivider(),
+                                    const _ProofItem(
+                                        icon: Icons.star_rounded,
+                                        label: '4.8★',
+                                        sub: 'Rating'),
+                                    _proofDivider(),
+                                    const _ProofItem(
+                                        icon: Icons.replay_rounded,
+                                        label: 'Free',
+                                        sub: 'Returns'),
+                                    _proofDivider(),
+                                    const _ProofItem(
+                                        icon: Icons.verified_rounded,
+                                        label: '100%',
+                                        sub: 'Secure'),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // ─── Quick-access chips ──────────────────────────────
+                            SizedBox(
+                              height: 38,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                children: const [
+                                  _QuickChip(Icons.local_shipping_rounded,
+                                      'Track Order', '/myOrders'),
+                                  _QuickChip(Icons.favorite_rounded, 'Wishlist',
+                                      '/wishlist'),
+                                  _QuickChip(Icons.local_offer_rounded,
+                                      'Offers', '/coupons'),
+                                  _QuickChip(Icons.support_agent_rounded,
+                                      'Support', '/support'),
+                                  _QuickChip(Icons.card_giftcard_rounded,
+                                      'Refer & Earn', '/referAndEarn'),
+                                ],
+                              ),
+                            ),
+
                             const SizedBox(height: 16),
 
                             // ─── [3] CATEGORIES START ────────────────────────────
@@ -495,20 +582,20 @@ class HomeView extends GetView<HomeController> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Good Morning !',
-                                  style: TextStyle(
+                                  _greeting(),
+                                  style: const TextStyle(
                                     fontSize: 10,
                                     color: Color(0xFFE3EBF1),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                SizedBox(height: 2),
-                                Text(
+                                const SizedBox(height: 2),
+                                const Text(
                                   'Devon Lane',
                                   style: TextStyle(
                                     fontSize: 20,
@@ -521,12 +608,14 @@ class HomeView extends GetView<HomeController> {
                           ),
                           _HeaderActionButton(
                             icon: Icons.notifications_none_rounded,
+                            badgeCount: 2,
                             onTap: () => Get.toNamed('/notifications'),
                           ),
-                          _HeaderActionButton(
-                            icon: Icons.shopping_bag_outlined,
-                            onTap: () => Get.toNamed('/cart'),
-                          ),
+                          Obx(() => _HeaderActionButton(
+                                icon: Icons.shopping_bag_outlined,
+                                badgeCount: cartController.itemCount,
+                                onTap: () => Get.toNamed('/cart'),
+                              )),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -551,49 +640,49 @@ class HomeView extends GetView<HomeController> {
                             ),
                           ],
                         ),
-                        child: CommonInputField.field(
-                          onTap: () => Get.toNamed('/search'),
-                          onChanged: (value) =>
-                              controller.searchQuery.value = value,
-                          hintText: 'Search here...',
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 15),
-                          prefixIconConstraints:
-                              const BoxConstraints(minWidth: 50, minHeight: 44),
-                          suffixIconConstraints:
-                              const BoxConstraints(minWidth: 50, minHeight: 44),
-                          prefixWidget: const Icon(
-                            Icons.search_rounded,
-                            color: Color(0xFF8A8A8A),
-                            size: 22,
-                          ),
-                          suffixWidget: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFF0F6B43),
-                            ),
-                            child: const Icon(
-                              Icons.tune_rounded,
-                              size: 17,
-                              color: AppColors.white,
-                            ),
-                          ),
-                          fillColor: AppColors.white,
-                          radius: 26,
-                          showFocusedBorder: false,
-                        ),
+                        child: Obx(() => CommonInputField.field(
+                              onTap: () => Get.toNamed('/search'),
+                              onChanged: (value) =>
+                                  controller.searchQuery.value = value,
+                              hintText: controller.currentSearchHint,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 15),
+                              prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 50, minHeight: 44),
+                              suffixIconConstraints: const BoxConstraints(
+                                  minWidth: 50, minHeight: 44),
+                              prefixWidget: const Icon(
+                                Icons.search_rounded,
+                                color: Color(0xFF8A8A8A),
+                                size: 22,
+                              ),
+                              suffixWidget: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFF0F6B43),
+                                ),
+                                child: const Icon(
+                                  Icons.tune_rounded,
+                                  size: 17,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                              fillColor: AppColors.white,
+                              radius: 26,
+                              showFocusedBorder: false,
+                            )),
                       ),
-                      Obx(
-                        () => controller.showEmergencyBanner.value
-                            ? _EmergencyBanner(
-                                message: controller.emergencyMessage.value,
-                                onClose: () => controller
-                                    .showEmergencyBanner.value = false,
-                              )
-                            : const SizedBox.shrink(),
-                      ),
+                      // Obx(
+                      //   () => controller.showEmergencyBanner.value
+                      //       ? _EmergencyBanner(
+                      //           message: controller.emergencyMessage.value,
+                      //           onClose: () => controller
+                      //               .showEmergencyBanner.value = false,
+                      //         )
+                      //       : const SizedBox.shrink(),
+                      // ),
                     ],
                   ),
                 ),
@@ -654,17 +743,17 @@ class _EmergencyBanner extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFFF3B30).withOpacity(0.18),
+        color: const Color.fromARGB(255, 248, 237, 185).withOpacity(0.18),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: const Color(0xFFFF3B30).withOpacity(0.55),
+          color: const Color.fromARGB(255, 248, 234, 171).withOpacity(0.55),
         ),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.warning_amber_rounded,
-            color: Color(0xFFFF3B30),
+            color: Color.fromARGB(255, 248, 173, 10),
             size: 15,
           ),
           const SizedBox(width: 8),
@@ -672,7 +761,7 @@ class _EmergencyBanner extends StatelessWidget {
             child: Text(
               message,
               style: const TextStyle(
-                color: Color(0xFFFF3B30),
+                color: Color.fromARGB(255, 241, 177, 0),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 height: 1.3,
@@ -685,7 +774,7 @@ class _EmergencyBanner extends StatelessWidget {
               padding: EdgeInsets.all(4),
               child: Icon(
                 Icons.close_rounded,
-                color: Color(0xFFFF3B30),
+                color: Color.fromARGB(255, 71, 71, 71),
                 size: 14,
               ),
             ),
@@ -699,32 +788,62 @@ class _EmergencyBanner extends StatelessWidget {
 class _HeaderActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _HeaderActionButton({
     required this.icon,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 42,
-        height: 42,
-        margin: const EdgeInsets.only(left: 8),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.07),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            margin: const EdgeInsets.only(left: 8),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.07),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Icon(icon, color: const Color(0xFF2D3A45), size: 20),
+            child: Icon(icon, color: const Color(0xFF2D3A45), size: 20),
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                width: 17,
+                height: 17,
+                decoration: const BoxDecoration(
+                  color: AppColors.error,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -2093,6 +2212,102 @@ class _BenefitTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Helpers for new sections ──────────────────────────────────────────────────
+
+String _greeting() {
+  final h = DateTime.now().hour;
+  if (h < 12) return 'Good Morning 🌅';
+  if (h < 17) return 'Good Afternoon ☀️';
+  return 'Good Evening 🌙';
+}
+
+Widget _proofDivider() => Container(
+      width: 1,
+      height: 28,
+      color: AppColors.primary1.withOpacity(0.15),
+    );
+
+class _ProofItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sub;
+
+  const _ProofItem(
+      {required this.icon, required this.label, required this.sub});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: AppColors.primary1),
+            const SizedBox(width: 4),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black1)),
+          ],
+        ),
+        Text(sub,
+            style: const TextStyle(
+                fontSize: 9,
+                color: AppColors.muteIconColor,
+                fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+class _QuickChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String route;
+
+  const _QuickChip(this.icon, this.label, this.route);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Get.toNamed(route),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.white2),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: AppColors.primary1),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.black1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

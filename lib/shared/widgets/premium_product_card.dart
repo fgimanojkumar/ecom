@@ -46,6 +46,7 @@ class _PremiumProductCardState extends State<PremiumProductCard> {
 
     return GestureDetector(
       onTap: widget.onTap,
+      onLongPress: () => _showQuickPreview(context),
       child: Card(
         margin: EdgeInsets.zero,
         color: AppColors.white,
@@ -65,48 +66,51 @@ class _PremiumProductCardState extends State<PremiumProductCard> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: isNetworkImage
-                        ? Image.network(
-                            widget.image,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (
-                              context,
-                              child,
-                              progress,
-                            ) {
-                              if (progress == null) {
-                                return child;
-                              }
-
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            },
-                            errorBuilder: (
-                              context,
-                              error,
-                              stackTrace,
-                            ) {
-                              return Container(
-                                color: AppColors.white2,
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.image,
-                                    size: 40,
-                                    color: AppColors.greyLight,
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: const Color(0xFFFFF8EE),
-                            alignment: Alignment.center,
-                            child: Text(
+                    child: Hero(
+                      tag: 'product_${widget.id}',
+                      child: isNetworkImage
+                          ? Image.network(
                               widget.image,
-                              style: const TextStyle(fontSize: 52),
+                              fit: BoxFit.cover,
+                              loadingBuilder: (
+                                context,
+                                child,
+                                progress,
+                              ) {
+                                if (progress == null) {
+                                  return child;
+                                }
+
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              },
+                              errorBuilder: (
+                                context,
+                                error,
+                                stackTrace,
+                              ) {
+                                return Container(
+                                  color: AppColors.white2,
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 40,
+                                      color: AppColors.greyLight,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : Container(
+                              color: const Color(0xFFFFF8EE),
+                              alignment: Alignment.center,
+                              child: Text(
+                                widget.image,
+                                style: const TextStyle(fontSize: 52),
+                              ),
                             ),
-                          ),
+                    ),
                   ),
 
                   /// DISCOUNT
@@ -164,7 +168,7 @@ class _PremiumProductCardState extends State<PremiumProductCard> {
 
             /// CONTENT
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -259,6 +263,181 @@ class _PremiumProductCardState extends State<PremiumProductCard> {
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showQuickPreview(BuildContext context) {
+    final hasDiscount = widget.originalPrice > widget.price;
+    final discountPct = hasDiscount
+        ? (((widget.originalPrice - widget.price) / widget.originalPrice) * 100)
+            .round()
+        : 0;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+            20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.white2,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Hero(
+              tag: 'product_${widget.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  widget.image,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 200,
+                    color: AppColors.white1,
+                    child: const Icon(Icons.image_outlined,
+                        size: 40, color: AppColors.muteIconColor),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.name,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black1),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.star_rounded,
+                    color: AppColors.statusBtnYellow, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.rating}  (${widget.reviewCount} reviews)',
+                  style: const TextStyle(fontSize: 12, color: AppColors.black2),
+                ),
+                if (hasDiscount) ...[
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '$discountPct% OFF',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.error),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  '₹${widget.price.toStringAsFixed(0)}',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary1),
+                ),
+                if (hasDiscount) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    '₹${widget.originalPrice.toStringAsFixed(0)}',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.muteIconColor,
+                        decoration: TextDecoration.lineThrough),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onTap();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('View Details'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.gradientStart,
+                          AppColors.gradientEnd
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary1.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        widget.onAddToCart?.call();
+                      },
+                      icon: const Icon(Icons.shopping_cart_outlined,
+                          size: 16, color: AppColors.white),
+                      label: const Text('Add to Cart',
+                          style: TextStyle(color: AppColors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
