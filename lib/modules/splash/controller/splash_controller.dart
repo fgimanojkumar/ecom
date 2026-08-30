@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../../shared/widgets/app_update_dialog.dart';
 
 class SplashController extends GetxController {
   final isLoading = true.obs;
@@ -10,8 +11,8 @@ class SplashController extends GetxController {
   }
 
   void _navigateToNext() {
-    Future.delayed(const Duration(milliseconds: 700), () {
-      // Navigate to onboarding flow first.
+    Future.delayed(const Duration(milliseconds: 700), () async {
+      await AppUpdateDialog.checkAndShow();
       Get.offNamed('/onboarding');
     });
   }

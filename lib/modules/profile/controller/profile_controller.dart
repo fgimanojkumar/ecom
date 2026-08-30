@@ -9,15 +9,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../data/database/users/adapter/user_profile.dart';
 import '../../../data/database/users/user_profile_db_provider.dart';
-import '../../../data/models/login/request_create_app_pin.dart';
-import '../../../data/services/login_service.dart';
 import '../../../shared/flutterStorage/flutter_storage_keys.dart';
 import '../../../shared/localStorage/local_storage.dart';
-import '../../../shared/widgets/app_toast.dart';
 
 class ProfileController extends GetxController {
-  final LoginService loginService = Get.put(LoginService());
-
   RxBool isDataLoaded = false.obs;
   Rx<UserProfile>? userProfile = Rx<UserProfile>(UserProfile());
   TextEditingController setPin = TextEditingController();
@@ -68,30 +63,6 @@ class ProfileController extends GetxController {
     } finally {
       await loadImageFromSecureStorage();
       isDataLoaded(true);
-    }
-  }
-
-  setUserPin() async {
-    if (setPin.text == confirmPin.text) {
-      RequestCreateAppPin createAppPin = RequestCreateAppPin();
-
-      createAppPin.username = userProfile?.value.userId; //username.text;
-      createAppPin.pin = setPin.text;
-
-      await loginService.setUserPin(
-        body: createAppPin,
-        onSuccess: (success) {
-          AppToast.successToast(success);
-          Get.back();
-          Get.back();
-        },
-        onFailed: (error) {
-          Get.back();
-          AppToast.errorToast(error);
-        },
-      );
-    } else {
-      AppToast.errorToast('Pin and confirm pin not same!');
     }
   }
 

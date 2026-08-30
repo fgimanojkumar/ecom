@@ -11,7 +11,7 @@ class NotificationView extends GetView<NotificationController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: AppColors.white,
       appBar: PremiumAppBar(
         title: 'Notifications',
         showBackButton: true,

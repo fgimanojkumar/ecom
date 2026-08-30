@@ -11,13 +11,13 @@ class PrivacyPolicyView extends GetView<PrivacyPolicyController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.white,
-      appBar: const PremiumAppBar(
+      appBar: PremiumAppBar(
         title: 'Privacy Policy',
         showBackButton: true,
       ),
-      body: const ResponsiveContent(
+      body: ResponsiveContent(
         addHorizontalPadding: true,
         child: SingleChildScrollView(
           physics: BouncingScrollPhysics(),

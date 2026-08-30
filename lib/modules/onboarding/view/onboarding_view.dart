@@ -18,7 +18,7 @@ class OnboardingView extends GetView<OnboardingController> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFFFF8F2), Color(0xFFFFFFFF)],
+                colors: [AppColors.white, AppColors.white],
               ),
             ),
           ),
@@ -121,8 +121,8 @@ class OnboardingView extends GetView<OnboardingController> {
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              Row(
-                                children: const [
+                              const Row(
+                                children: [
                                   _FeatureChip(label: 'Free Shipping'),
                                   SizedBox(width: 10),
                                   _FeatureChip(label: 'Secure Payments'),

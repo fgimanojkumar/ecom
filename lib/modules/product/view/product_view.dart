@@ -15,8 +15,17 @@ class ProductListingView extends StatefulWidget {
 class _ProductListingViewState extends State<ProductListingView> {
   bool isGrid = true;
   String _sortLabel = 'Popular';
+  int _displayedCount = 20;
+  bool _isLoadingMore = false;
+  int _activeFilterCount = 0;
+  static const int _pageSize = 20;
+  static const int _totalProducts = 100;
+
+  int get _currentPage => (_displayedCount / _pageSize).ceil();
+  int get _totalPages => (_totalProducts / _pageSize).ceil();
 
   final TextEditingController searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   final List<String> categories = [
     'All',
@@ -29,8 +38,43 @@ class _ProductListingViewState extends State<ProductListingView> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300 &&
+        !_isLoadingMore &&
+        _displayedCount < _totalProducts) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    setState(() => _isLoadingMore = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    setState(() {
+      _displayedCount = (_displayedCount + _pageSize).clamp(0, _totalProducts);
+      _isLoadingMore = false;
+    });
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _displayedCount = _pageSize;
+      _isLoadingMore = false;
+    });
+    await Future.delayed(const Duration(milliseconds: 800));
+  }
+
+  @override
   void dispose() {
     searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -81,30 +125,58 @@ class _ProductListingViewState extends State<ProductListingView> {
                 ),
                 GestureDetector(
                   onTap: () => _showFilterSheet(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D3A45),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.tune_rounded, color: Colors.white, size: 15),
-                        SizedBox(width: 5),
-                        Text(
-                          'Filter',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2D3A45),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.tune_rounded,
+                                color: Colors.white, size: 15),
+                            SizedBox(width: 5),
+                            Text(
+                              'Filter',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_activeFilterCount > 0)
+                        Positioned(
+                          top: -5,
+                          right: -5,
+                          child: Container(
+                            width: 17,
+                            height: 17,
+                            decoration: const BoxDecoration(
+                              color: AppColors.error,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$_activeFilterCount',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800),
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -144,22 +216,132 @@ class _ProductListingViewState extends State<ProductListingView> {
 
           const SizedBox(height: 12),
 
+          // ── Page indicator ───────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Row(
+              children: [
+                Text(
+                  'Page $_currentPage of $_totalPages',
+                  style: TextStyle(
+                    color: AppColors.black2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(_totalPages, (i) {
+                        final page = i + 1;
+                        final isLoaded = page <= _currentPage;
+                        final isCurrent = page == _currentPage;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.only(right: 6),
+                          width: isCurrent ? 28 : 22,
+                          height: isCurrent ? 28 : 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isCurrent
+                                ? AppColors.primary1
+                                : isLoaded
+                                    ? AppColors.gradientEnd.withOpacity(0.35)
+                                    : AppColors.white2,
+                            boxShadow: isCurrent
+                                ? [
+                                    BoxShadow(
+                                      color:
+                                          AppColors.primary1.withOpacity(0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$page',
+                              style: TextStyle(
+                                fontSize: isCurrent ? 11 : 10,
+                                fontWeight: FontWeight.w700,
+                                color: isCurrent
+                                    ? AppColors.white
+                                    : isLoaded
+                                        ? AppColors.primary1
+                                        : AppColors.muteIconColor,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // ─── PRODUCTS GRID ───────────────────────────────
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              itemCount: 20,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isGrid ? responsiveGridCount : 1,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isGrid
-                    ? (width >= 980 ? 0.78 : 0.72)
-                    : (width >= 980 ? 3.0 : 2.4),
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh,
+              color: AppColors.primary1,
+              child: GridView.builder(
+                controller: _scrollController,
+                primary: false,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                // +1 for the bottom loader tile
+                itemCount: _displayedCount +
+                    (_displayedCount < _totalProducts ? 1 : 0),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isGrid ? responsiveGridCount : 1,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: isGrid
+                      ? (width >= 980 ? 0.78 : 0.62)
+                      : (width >= 980 ? 3.0 : 2.4),
+                ),
+                itemBuilder: (context, index) {
+                  // Bottom loader spans full row
+                  if (index == _displayedCount) {
+                    // Loader tile: use SizedBox to span a single cell cleanly
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: _isLoadingMore
+                            ? CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.primary1,
+                              )
+                            : Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Page $_currentPage loaded · ${_totalProducts - _displayedCount} more',
+                                    style: TextStyle(
+                                        fontSize: 12, color: AppColors.black2),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextButton(
+                                    onPressed: _loadMore,
+                                    child: Text(
+                                      'Load Page ${_currentPage + 1}',
+                                      style:
+                                          TextStyle(color: AppColors.primary1),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    );
+                  }
+                  return _ProductCard(isGrid: isGrid, index: index);
+                },
               ),
-              itemBuilder: (context, index) {
-                return _ProductCard(isGrid: isGrid, index: index);
-              },
             ),
           ),
         ],
@@ -172,7 +354,10 @@ class _ProductListingViewState extends State<ProductListingView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _FilterSheet(),
+      builder: (_) => _FilterSheet(
+        onApply: (count) => setState(() => _activeFilterCount = count),
+        onReset: () => setState(() => _activeFilterCount = 0),
+      ),
     );
   }
 
@@ -365,7 +550,10 @@ class _ListCard extends StatelessWidget {
 
 // ─── Filter Bottom Sheet ──────────────────────────────────────
 class _FilterSheet extends StatefulWidget {
-  const _FilterSheet();
+  final ValueChanged<int>? onApply;
+  final VoidCallback? onReset;
+
+  const _FilterSheet({this.onApply, this.onReset});
 
   @override
   State<_FilterSheet> createState() => _FilterSheetState();
@@ -412,7 +600,14 @@ class _FilterSheetState extends State<_FilterSheet> {
                 ),
                 const Spacer(),
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    setState(() {
+                      _checked.fillRange(0, _checked.length, false);
+                      _price = const RangeValues(500, 10000);
+                    });
+                    widget.onReset?.call();
+                    Navigator.pop(context);
+                  },
                   child: const Text('Reset'),
                 ),
               ],
@@ -513,7 +708,12 @@ class _FilterSheetState extends State<_FilterSheet> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  final count = _checked.where((c) => c).length +
+                      (_price != const RangeValues(500, 10000) ? 1 : 0);
+                  widget.onApply?.call(count);
+                  Navigator.pop(context);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0F6B43),
                   shape: RoundedRectangleBorder(

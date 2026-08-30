@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'
+    show ScrollController, TextEditingController;
 import 'package:get/get.dart';
 
 class SearchController extends GetxController {
@@ -303,17 +305,85 @@ class SearchController extends GetxController {
       'prepTime': 35,
       'freeDelivery': false,
     },
+    // ── Auto-generated product entries ────────────────────────────────────
+    ...List.generate(93, (i) {
+      final cats = ['Fruits', 'Vegetables', 'Beverages', 'Meat'];
+      final sellers = ['Philip', 'Arlene', 'Warren', 'Ferrari', 'Kylie'];
+      final food = ['Veg', 'Non-Veg'];
+      final spice = ['Mild', 'Medium', 'Spicy'];
+      final meal = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+      final diet = ['Balanced', 'High Protein', 'Low Carb', 'Keto'];
+      final price = 8.0 + (i % 40);
+      final old = price + 5 + (i % 10);
+      return {
+        'name': 'Product ${i + 8}',
+        'image': 'https://picsum.photos/300?random=${i + 10}',
+        'seller': sellers[i % sellers.length],
+        'rating': '${3.5 + (i % 15) * 0.1}',
+        'price': '\$$price',
+        'oldPrice': '\$$old',
+        'category': cats[i % cats.length],
+        'stock': i % 5 == 0 ? 0 : 5 + (i % 20),
+        'isNew': i % 7 == 0,
+        'deliveryTime': 15 + (i % 30),
+        'isOneBenefit': i % 3 == 0,
+        'cuisines': <String>[],
+        'exploreTags': <String>[],
+        'foodType': food[i % 2],
+        'costForTwo': 150 + (i % 350),
+        'mealTime': meal[i % 4],
+        'spiceLevel': spice[i % 3],
+        'portionSize': 'Single',
+        'dietType': diet[i % 4],
+        'prepTime': 10 + (i % 30),
+        'freeDelivery': i % 4 == 0,
+      };
+    }),
   ];
 
   final RxList<Map<String, dynamic>> products = <Map<String, dynamic>>[].obs;
 
   final RxList<bool> favorites = <bool>[].obs;
 
+  // Pagination
+  static const int _pageSize = 20;
+  final displayedCount = 20.obs;
+  final isLoadingMore = false.obs;
+  final scrollController = ScrollController();
+  final searchTextController = TextEditingController();
+
   @override
   void onInit() {
     super.onInit();
     products.assignAll(_allProducts);
     favorites.assignAll(List<bool>.filled(_allProducts.length, false));
+    scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    searchTextController.dispose();
+    super.onClose();
+  }
+
+  void _onScroll() {
+    if (!scrollController.hasClients) return;
+    final pos = scrollController.position;
+    // extentAfter is the remaining scrollable content below the viewport
+    if (pos.extentAfter < 400 &&
+        !isLoadingMore.value &&
+        displayedCount.value < products.length) {
+      loadMore();
+    }
+  }
+
+  Future<void> loadMore() async {
+    isLoadingMore.value = true;
+    await Future.delayed(const Duration(milliseconds: 600));
+    displayedCount.value =
+        (displayedCount.value + _pageSize).clamp(0, products.length);
+    isLoadingMore.value = false;
   }
 
   void updateSearchQuery(String query) {
@@ -323,6 +393,7 @@ class SearchController extends GetxController {
 
   void clearSearch() {
     searchQuery.value = '';
+    searchTextController.clear();
     applyFilters();
   }
 
@@ -608,6 +679,8 @@ class SearchController extends GetxController {
 
     _sortProducts(filtered);
     products.assignAll(filtered);
+    // Reset pagination whenever filter results change
+    displayedCount.value = _pageSize;
   }
 
   void resetFilters() {
