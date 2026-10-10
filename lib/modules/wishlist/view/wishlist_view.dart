@@ -86,7 +86,7 @@ class WishlistView extends GetView<WishlistController> {
                       ),
                       const SizedBox(height: 18),
                       FilledButton.icon(
-                        onPressed: () => Get.toNamed('/products'),
+                        onPressed: () => Get.toNamed('/home'),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary2,
                           foregroundColor: AppColors.white,
@@ -191,7 +191,8 @@ class WishlistView extends GetView<WishlistController> {
                     crossAxisCount: columns,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: width > 900 ? 0.7 : 0.65,
+                    childAspectRatio:
+                        (width - 32 - (12 * (columns - 1))) / columns / 310,
                   ),
                   itemCount: controller.wishlistItems.length,
                   itemBuilder: (context, index) {
@@ -205,6 +206,9 @@ class WishlistView extends GetView<WishlistController> {
                       rating: 4.5,
                       reviewCount: 100,
                       isWishlisted: true,
+                      isSponsored: item['isSponsored'] == true,
+                      lowestPrice30Days:
+                          (item['lowestPrice30Days'] as num?)?.toDouble(),
                       onTap: () =>
                           Get.toNamed('/productDetails', arguments: item['id']),
                       onAddToCart: () =>

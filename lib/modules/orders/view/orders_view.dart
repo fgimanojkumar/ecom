@@ -21,75 +21,136 @@ class OrdersView extends GetView<OrdersController> {
         addHorizontalPadding: true,
         child: Obx(() {
           final orders = controller.orders;
+          if (orders.isEmpty) return _buildEmptyState();
 
-          if (orders.isEmpty) {
-            return _buildEmptyState();
+          final deliveredOrders =
+              orders.where((order) => order['status'] == 'Delivered').toList();
+          final pendingOrders = orders.where((order) {
+            final status = (order['status'] as String? ?? '').toLowerCase();
+            return status != 'delivered' &&
+                status != 'cancelled' &&
+                status != 'returned';
+          }).toList();
+          final filteredOrders = switch (controller.selectedStatus.value) {
+            'Delivered' => deliveredOrders,
+            'Pending' => pendingOrders,
+            _ => orders.toList(),
+          };
+
+          if (filteredOrders.isEmpty) {
+            return _buildFilteredEmptyState(controller.selectedStatus.value);
           }
-
-          final deliveredCount =
-              orders.where((o) => o['status'] == 'Delivered').length;
-          final pendingCount =
-              orders.where((o) => o['status'] != 'Delivered').length;
 
           return Column(
             children: [
-              // â”€â”€ Summary strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Your orders',
+                        style: TextStyle(
+                          color: AppColors.black1,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary1.withOpacity(0.3),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
+                    Text(
+                      '${orders.length} total',
+                      style: const TextStyle(
+                        color: AppColors.black2,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                  child: Row(
-                    children: [
-                      _StatItem(
-                        label: 'Total',
-                        value: '${orders.length}',
-                        icon: Icons.list_alt_rounded,
-                      ),
-                      _VerticalDividerLine(),
-                      _StatItem(
-                        label: 'Delivered',
-                        value: '$deliveredCount',
-                        icon: Icons.check_circle_rounded,
-                      ),
-                      _VerticalDividerLine(),
-                      _StatItem(
-                        label: 'Pending',
-                        value: '$pendingCount',
-                        icon: Icons.timelapse_rounded,
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'To download an invoice, tap Track on the order and choose Invoice.',
+                    style: TextStyle(
+                      color: AppColors.black2,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ),
-
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _OrdersFilterTab(
+                        label: 'Total',
+                        count: orders.length,
+                        selected: controller.selectedStatus.value == 'Total',
+                        onTap: () => controller.selectStatus('Total'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _OrdersFilterTab(
+                        label: 'Delivered',
+                        count: deliveredOrders.length,
+                        selected:
+                            controller.selectedStatus.value == 'Delivered',
+                        onTap: () => controller.selectStatus('Delivered'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _OrdersFilterTab(
+                        label: 'Pending',
+                        count: pendingOrders.length,
+                        selected: controller.selectedStatus.value == 'Pending',
+                        onTap: () => controller.selectStatus('Pending'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
                     await Future.delayed(const Duration(milliseconds: 800));
                   },
                   color: AppColors.primary1,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    itemCount: orders.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
-                    itemBuilder: (context, index) => _OrderCard(
-                        order: orders[index], controller: controller),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth >= 900) {
+                        return GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 600,
+                            mainAxisExtent: 520,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: filteredOrders.length,
+                          itemBuilder: (context, index) => _OrderCard(
+                            order: filteredOrders[index],
+                            controller: controller,
+                          ),
+                        );
+                      }
+                      return ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        itemCount: filteredOrders.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 14),
+                        itemBuilder: (context, index) => _OrderCard(
+                          order: filteredOrders[index],
+                          controller: controller,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -180,7 +241,7 @@ class OrdersView extends GetView<OrdersController> {
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: () => Get.toNamed('/products'),
+                  onPressed: () => Get.toNamed('/home'),
                   icon: const Icon(Icons.shopping_bag_outlined,
                       size: 18, color: AppColors.white),
                   label: const Text('Start Shopping',
@@ -202,9 +263,103 @@ class OrdersView extends GetView<OrdersController> {
       ),
     );
   }
+
+  Widget _buildFilteredEmptyState(String status) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.inbox_outlined,
+              color: AppColors.muteIconColor,
+              size: 42,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No $status orders',
+              style: const TextStyle(
+                color: AppColors.black1,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => controller.selectStatus('Total'),
+              child: const Text('Show all orders'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // â”€â”€â”€ Order Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _OrdersFilterTab extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _OrdersFilterTab({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(13),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          constraints: const BoxConstraints(minHeight: 62),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFEAF4EE) : AppColors.white,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: selected ? AppColors.primary1 : AppColors.white2,
+              width: selected ? 1.3 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? AppColors.primary1 : AppColors.black2,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '$count',
+                style: TextStyle(
+                  color: selected ? AppColors.primary1 : AppColors.black1,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _OrderCard extends StatefulWidget {
   final Map order;
@@ -228,17 +383,13 @@ class _OrderCardState extends State<_OrderCard> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE9EEEB)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.07),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            color: AppColors.black.withOpacity(0.045),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -248,16 +399,9 @@ class _OrderCardState extends State<_OrderCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.gradientStart.withOpacity(0.08),
-                  AppColors.gradientEnd.withOpacity(0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color(0xFFF7F9F8),
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
@@ -454,65 +598,25 @@ class _OrderCardState extends State<_OrderCard> {
                 const SizedBox(height: 12),
 
                 // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => widget.controller
-                            .viewOrderDetails(order['id'] as String),
-                        icon: const Icon(Icons.location_on_outlined, size: 16),
-                        label: const Text('Track',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary1,
-                          side: const BorderSide(color: AppColors.primary1),
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => widget.controller
+                        .viewOrderDetails(order['id'] as String),
+                    icon: const Icon(Icons.local_shipping_outlined, size: 16),
+                    label: const Text(
+                      'Track',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary1,
+                      side: const BorderSide(color: AppColors.primary1),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.gradientStart,
-                              AppColors.gradientEnd
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary1.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: () => widget.controller
-                              .viewOrderDetails(order['id'] as String),
-                          icon: const Icon(Icons.receipt_long_rounded,
-                              color: AppColors.white, size: 16),
-                          label: const Text('Details',
-                              style: TextStyle(
-                                  color: AppColors.white,
-                                  fontWeight: FontWeight.w600)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -619,59 +723,3 @@ class _StatusChip extends StatelessWidget {
 }
 
 // â”€â”€â”€ Summary Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-// ─── Stat Item (inside gradient banner) ──────────────────────────────────────
-
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _StatItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.85), size: 20),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VerticalDividerLine extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      color: Colors.white.withOpacity(0.3),
-    );
-  }
-}

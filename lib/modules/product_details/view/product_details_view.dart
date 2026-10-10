@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:imoss/shared/style/app_colors.dart';
 import 'package:imoss/shared/utils/responsive_util.dart';
 
@@ -16,6 +17,8 @@ class ProductDetailsView extends GetView<ProductDetailsController> {
     final sizes = (controller.product['sizes'] as List?) ?? const [];
     final colors = (controller.product['colors'] as List?) ?? const [];
     final features = (controller.product['features'] as List?) ?? const [];
+    final sellerCertificates =
+        (controller.product['sellerCertificates'] as List?) ?? const [];
     final benefits = (controller.product['benefits'] as List?) ?? const [];
     final howToUse = (controller.product['howToUse'] as List?) ?? const [];
     final ingredients =
@@ -32,6 +35,10 @@ class ProductDetailsView extends GetView<ProductDetailsController> {
         ((controller.product['originalPrice'] as num?) ?? 0).toDouble();
     final rating = ((controller.product['rating'] as num?) ?? 0).toDouble();
     final reviewCount = (controller.product['reviewCount'] as int?) ?? 0;
+    final certificationValue = controller.product['sellerCertified'];
+    final sellerCertified =
+        certificationValue is bool ? certificationValue : null;
+    final isBestSeller = controller.product['isBestSeller'] == true;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -41,13 +48,19 @@ class ProductDetailsView extends GetView<ProductDetailsController> {
         actions: [
           _CircleAction(
             icon: Icons.share_outlined,
-            onTap: () {},
+            onTap: () => Share.share(
+              'Check out ${controller.product['name']} for ₹${price.toStringAsFixed(0)}',
+            ),
           ),
           const SizedBox(width: 8),
-          _CircleAction(
-            icon: Icons.favorite_border_rounded,
-            iconColor: AppColors.error,
-            onTap: () {},
+          Obx(
+            () => _CircleAction(
+              icon: controller.isWishlisted.value
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              iconColor: AppColors.error,
+              onTap: controller.toggleWishlist,
+            ),
           ),
           const SizedBox(width: 12),
         ],
@@ -55,263 +68,445 @@ class ProductDetailsView extends GetView<ProductDetailsController> {
       body: SafeArea(
         child: ResponsiveContent(
           addHorizontalPadding: true,
-          child: Obx(
-            () => SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Gallery outside padded block — takes full available width
-                  _ProductGallery(
-                    images: images,
-                    selectedIndex: controller.selectedImageIndex.value,
-                    onPageChanged: (index) =>
-                        controller.selectedImageIndex.value = index,
-                    onThumbnailTap: controller.selectImage,
-                    pageController: controller.imagePageController,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: categories
-                              .map(
-                                (cat) => _CategoryChip(
-                                  label: cat.toString(),
-                                  isSelected:
-                                      controller.selectedCategory.value == cat,
-                                  onTap: () =>
-                                      controller.selectedCategory.value = cat,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWeb = constraints.maxWidth >= 900;
+
+              return Obx(
+                () => SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isWeb)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 11,
+                                child: _ProductGallery(
+                                  images: images,
+                                  selectedIndex:
+                                      controller.selectedImageIndex.value,
+                                  onPageChanged: (index) => controller
+                                      .selectedImageIndex.value = index,
+                                  onThumbnailTap: controller.selectImage,
+                                  pageController:
+                                      controller.imagePageController,
                                 ),
-                              )
-                              .toList(),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          (controller.product['name'] as String?) ??
-                              'Premium Product',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                            color: AppColors.black1,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'by ${(controller.product['brand'] as String?) ?? 'Brand'}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.black2,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _PriceStockCard(
-                          controller: controller,
-                          price: price,
-                          originalPrice: originalPrice,
-                          inStock:
-                              (controller.product['inStock'] as bool?) ?? true,
-                          deliveryText:
-                              (controller.product['delivery'] as String?) ??
-                                  'Fast delivery available',
-                          seller: (controller.product['seller'] as String?) ??
-                              'Verified seller',
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Select Size'),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: sizes
-                              .map(
-                                (size) => _ChoiceChipButton(
-                                  label: size.toString(),
-                                  isSelected:
-                                      controller.selectedSize.value == size,
-                                  onTap: () =>
-                                      controller.selectedSize.value = size,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Color Options'),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: colors
-                              .map(
-                                (color) => _ChoiceChipButton(
-                                  label: color.toString(),
-                                  isSelected:
-                                      controller.selectedColor.value == color,
-                                  onTap: () =>
-                                      controller.selectedColor.value = color,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Benefits'),
-                        const SizedBox(height: 10),
-                        ...benefits.map(
-                          (item) => _BulletText(text: item.toString()),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Description'),
-                        const SizedBox(height: 10),
-                        Text(
-                          (controller.product['description'] as String?) ??
-                              'No description available.',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: AppColors.black2,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Highlights'),
-                        const SizedBox(height: 10),
-                        ...features.map(
-                          (feature) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 5),
-                                  child: Icon(
-                                    Icons.check_circle_rounded,
-                                    size: 16,
-                                    color: AppColors.success,
+                              ),
+                              const SizedBox(width: 32),
+                              Expanded(
+                                flex: 10,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: categories
+                                            .map(
+                                              (cat) => _CategoryChip(
+                                                label: cat.toString(),
+                                                isSelected: controller
+                                                        .selectedCategory
+                                                        .value ==
+                                                    cat,
+                                                onTap: () => controller
+                                                    .selectedCategory
+                                                    .value = cat,
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Text(
+                                        (controller.product['name']
+                                                as String?) ??
+                                            'Premium Product',
+                                        style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.black1,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'by ${(controller.product['brand'] as String?) ?? 'Brand'}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.black2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _PriceStockCard(
+                                        controller: controller,
+                                        price: price,
+                                        originalPrice: originalPrice,
+                                        inStock: (controller.product['inStock']
+                                                as bool?) ??
+                                            true,
+                                        deliveryText:
+                                            (controller.product['delivery']
+                                                    as String?) ??
+                                                'Fast delivery available',
+                                        seller: (controller.product['seller']
+                                                as String?) ??
+                                            'Verified seller',
+                                        sellerCertified: sellerCertified,
+                                        isBestSeller: isBestSeller,
+                                      ),
+                                      if (sizes.isNotEmpty) ...[
+                                        const SizedBox(height: 18),
+                                        _SectionTitle(title: 'Select Size'),
+                                        const SizedBox(height: 10),
+                                        Wrap(
+                                          spacing: 10,
+                                          runSpacing: 10,
+                                          children: sizes
+                                              .map(
+                                                (size) => _ChoiceChipButton(
+                                                  label: size.toString(),
+                                                  isSelected: controller
+                                                          .selectedSize.value ==
+                                                      size,
+                                                  onTap: () => controller
+                                                      .selectedSize
+                                                      .value = size,
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                      if (colors.isNotEmpty) ...[
+                                        const SizedBox(height: 18),
+                                        _SectionTitle(title: 'Color Options'),
+                                        const SizedBox(height: 10),
+                                        Wrap(
+                                          spacing: 10,
+                                          runSpacing: 10,
+                                          children: colors
+                                              .map(
+                                                (color) => _ChoiceChipButton(
+                                                  label: color.toString(),
+                                                  isSelected: controller
+                                                          .selectedColor
+                                                          .value ==
+                                                      color,
+                                                  onTap: () => controller
+                                                      .selectedColor
+                                                      .value = color,
+                                                  swatchColor:
+                                                      _productColorSwatch(
+                                                          color.toString()),
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    feature.toString(),
-                                    style: const TextStyle(
-                                      color: AppColors.black1,
-                                      fontSize: 13,
-                                      height: 1.45,
-                                    ),
-                                  ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        _ProductGallery(
+                          images: images,
+                          selectedIndex: controller.selectedImageIndex.value,
+                          onPageChanged: (index) =>
+                              controller.selectedImageIndex.value = index,
+                          onThumbnailTap: controller.selectImage,
+                          pageController: controller.imagePageController,
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!isWeb) ...[
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: categories
+                                    .map(
+                                      (cat) => _CategoryChip(
+                                        label: cat.toString(),
+                                        isSelected:
+                                            controller.selectedCategory.value ==
+                                                cat,
+                                        onTap: () => controller
+                                            .selectedCategory.value = cat,
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                (controller.product['name'] as String?) ??
+                                    'Premium Product',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.black1,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'by ${(controller.product['brand'] as String?) ?? 'Brand'}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.black2,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              _PriceStockCard(
+                                controller: controller,
+                                price: price,
+                                originalPrice: originalPrice,
+                                inStock:
+                                    (controller.product['inStock'] as bool?) ??
+                                        true,
+                                deliveryText: (controller.product['delivery']
+                                        as String?) ??
+                                    'Fast delivery available',
+                                seller:
+                                    (controller.product['seller'] as String?) ??
+                                        'Verified seller',
+                                sellerCertified: sellerCertified,
+                                isBestSeller: isBestSeller,
+                              ),
+                              if (sizes.isNotEmpty) ...[
+                                const SizedBox(height: 18),
+                                _SectionTitle(title: 'Select Size'),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: sizes
+                                      .map(
+                                        (size) => _ChoiceChipButton(
+                                          label: size.toString(),
+                                          isSelected:
+                                              controller.selectedSize.value ==
+                                                  size,
+                                          onTap: () => controller
+                                              .selectedSize.value = size,
+                                        ),
+                                      )
+                                      .toList(),
                                 ),
                               ],
+                            ],
+                            if (!isWeb && colors.isNotEmpty) ...[
+                              const SizedBox(height: 18),
+                              _SectionTitle(title: 'Color Options'),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: colors
+                                    .map(
+                                      (color) => _ChoiceChipButton(
+                                        label: color.toString(),
+                                        isSelected:
+                                            controller.selectedColor.value ==
+                                                color,
+                                        onTap: () => controller
+                                            .selectedColor.value = color,
+                                        swatchColor: _productColorSwatch(
+                                            color.toString()),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ],
+                            const SizedBox(height: 18),
+                            _SectionTitle(title: 'Benefits'),
+                            const SizedBox(height: 10),
+                            ...benefits.map(
+                              (item) => _BulletText(text: item.toString()),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'How To Use'),
-                        const SizedBox(height: 10),
-                        ...howToUse.asMap().entries.map(
-                              (entry) => _NumberedText(
-                                number: entry.key + 1,
-                                text: entry.value.toString(),
+                            const SizedBox(height: 18),
+                            _ExpandableDetailsSection(
+                              title: 'Description',
+                              initiallyExpanded: true,
+                              child: Text(
+                                (controller.product['description']
+                                        as String?) ??
+                                    'No description available.',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 1.6,
+                                  color: AppColors.black2,
+                                ),
                               ),
                             ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Ingredients'),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: ingredients
-                              .map(
-                                (item) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8F8F8),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: const Color(0xFFE8E8E8),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    item.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.black1,
-                                    ),
+                            if (features.isNotEmpty)
+                              _ExpandableDetailsSection(
+                                title: 'Highlights',
+                                child: Column(
+                                  children: features
+                                      .map(
+                                        (feature) => Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 8),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Padding(
+                                                padding:
+                                                    EdgeInsets.only(top: 5),
+                                                child: Icon(
+                                                  Icons.check_circle_rounded,
+                                                  size: 16,
+                                                  color: AppColors.success,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  feature.toString(),
+                                                  style: const TextStyle(
+                                                    color: AppColors.black1,
+                                                    fontSize: 13,
+                                                    height: 1.45,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            const SizedBox(height: 18),
+                            _SectionTitle(title: 'How To Use'),
+                            const SizedBox(height: 10),
+                            ...howToUse.asMap().entries.map(
+                                  (entry) => _NumberedText(
+                                    number: entry.key + 1,
+                                    text: entry.value.toString(),
                                   ),
                                 ),
-                              )
-                              .toList(),
+                            const SizedBox(height: 18),
+                            if (ingredients.isNotEmpty)
+                              _ExpandableDetailsSection(
+                                title: 'Ingredients & materials',
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: ingredients
+                                      .map(
+                                        (item) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 7,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.white1,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            border: Border.all(
+                                                color: AppColors.white2),
+                                          ),
+                                          child: Text(
+                                            item.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.black1,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            const SizedBox(height: 18),
+                            _SectionTitle(title: 'Product Warning'),
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF8E6),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: const Color(0xFFFFE3A3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: warnings
+                                    .map(
+                                      (item) => _BulletText(
+                                        text: item.toString(),
+                                        iconColor: AppColors.warning,
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            _SectionTitle(title: 'Related Products'),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 208,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: relatedProducts.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 10),
+                                itemBuilder: (context, index) {
+                                  final item = relatedProducts[index] as Map;
+                                  return _RelatedProductCard(item: item);
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            _SectionTitle(title: 'Ratings & Reviews'),
+                            const SizedBox(height: 10),
+                            _RatingSummaryCard(
+                              rating: rating,
+                              reviewCount: reviewCount,
+                              breakdown: ratingBreakdown,
+                            ),
+                            const SizedBox(height: 14),
+                            _SectionTitle(title: 'User Ratings'),
+                            const SizedBox(height: 10),
+                            ...reviews.map(
+                              (review) => _ReviewCard(
+                                name: review['name']?.toString() ?? 'Customer',
+                                rating:
+                                    (review['rating'] as num?)?.toDouble() ?? 4,
+                                comment: review['comment']?.toString() ?? '',
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            _SellerCertificatesSection(
+                              seller:
+                                  controller.product['seller']?.toString() ??
+                                      'Verified seller',
+                              certificates: sellerCertificates,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Product Warning'),
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF8E6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFFFE3A3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: warnings
-                                .map(
-                                  (item) => _BulletText(
-                                    text: item.toString(),
-                                    iconColor: AppColors.warning,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Related Products'),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 208,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: relatedProducts.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 10),
-                            itemBuilder: (context, index) {
-                              final item = relatedProducts[index] as Map;
-                              return _RelatedProductCard(item: item);
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionTitle(title: 'Ratings & Reviews'),
-                        const SizedBox(height: 10),
-                        _RatingSummaryCard(
-                          rating: rating,
-                          reviewCount: reviewCount,
-                          breakdown: ratingBreakdown,
-                        ),
-                        const SizedBox(height: 14),
-                        _SectionTitle(title: 'User Ratings'),
-                        const SizedBox(height: 10),
-                        ...reviews.map(
-                          (review) => _ReviewCard(
-                            name: review['name']?.toString() ?? 'Customer',
-                            rating: (review['rating'] as num?)?.toDouble() ?? 4,
-                            comment: review['comment']?.toString() ?? '',
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -335,6 +530,49 @@ class _ProductGallery extends StatelessWidget {
     required this.pageController,
   });
 
+  Widget _buildGalleryImage(String image, {bool thumbnail = false}) {
+    final fit = thumbnail ? BoxFit.cover : BoxFit.contain;
+    if (image.startsWith('http')) {
+      return Image.network(
+        image,
+        width: double.infinity,
+        fit: fit,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.image_not_supported_outlined,
+          color: AppColors.black2,
+          size: 52,
+        ),
+      );
+    }
+    if (image.startsWith('resources/')) {
+      return Image.asset(
+        image,
+        width: double.infinity,
+        fit: fit,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.image_not_supported_outlined,
+          color: AppColors.black2,
+          size: 52,
+        ),
+      );
+    }
+    if (image.isNotEmpty) {
+      return Center(
+        child: Text(
+          image,
+          style: TextStyle(fontSize: thumbnail ? 28 : 112),
+        ),
+      );
+    }
+    return const Center(
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: AppColors.black2,
+        size: 52,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -350,18 +588,7 @@ class _ProductGallery extends StatelessWidget {
               final image = images.isEmpty
                   ? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10'
                   : images[index].toString();
-              return Image.network(
-                image,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(
-                    Icons.image_not_supported_outlined,
-                    color: AppColors.black2,
-                    size: 52,
-                  ),
-                ),
-              );
+              return _buildGalleryImage(image);
             },
           ),
         ),
@@ -406,15 +633,7 @@ class _ProductGallery extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        thumb,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.image_outlined,
-                          color: AppColors.black2,
-                          size: 20,
-                        ),
-                      ),
+                      child: _buildGalleryImage(thumb, thumbnail: true),
                     ),
                   ),
                 );
@@ -563,6 +782,8 @@ class _PriceStockCard extends StatelessWidget {
   final bool inStock;
   final String deliveryText;
   final String seller;
+  final bool? sellerCertified;
+  final bool isBestSeller;
 
   const _PriceStockCard({
     required this.controller,
@@ -571,6 +792,8 @@ class _PriceStockCard extends StatelessWidget {
     required this.inStock,
     required this.deliveryText,
     required this.seller,
+    required this.sellerCertified,
+    required this.isBestSeller,
   });
 
   @override
@@ -725,9 +948,90 @@ class _PriceStockCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              _SellerTrustBadge(
+                label: sellerCertified == true
+                    ? 'Certified seller'
+                    : sellerCertified == false
+                        ? 'Not certified'
+                        : 'Certification status unavailable',
+                icon: sellerCertified == true
+                    ? Icons.verified_rounded
+                    : sellerCertified == false
+                        ? Icons.info_outline_rounded
+                        : Icons.help_outline_rounded,
+                color: sellerCertified == true
+                    ? AppColors.success
+                    : sellerCertified == false
+                        ? AppColors.warning
+                        : AppColors.black2,
+              ),
+              if (isBestSeller)
+                const _SellerTrustBadge(
+                  label: 'Best seller',
+                  icon: Icons.emoji_events_outlined,
+                  color: AppColors.primary1,
+                ),
+            ],
+          ),
         ],
       ),
     );
+  }
+}
+
+class _SellerTrustBadge extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _SellerTrustBadge({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _productColorSwatch(String color) {
+  switch (color.toLowerCase()) {
+    case 'black':
+      return const Color(0xFF242424);
+    case 'silver':
+      return const Color(0xFFC5C9CC);
+    case 'gold':
+      return const Color(0xFFD7AF53);
+    default:
+      return AppColors.primary1;
   }
 }
 
@@ -735,11 +1039,13 @@ class _ChoiceChipButton extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final Color? swatchColor;
 
   const _ChoiceChipButton({
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.swatchColor,
   });
 
   @override
@@ -764,13 +1070,33 @@ class _ChoiceChipButton extends StatelessWidget {
               ),
           ],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? AppColors.white : AppColors.black1,
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (swatchColor != null) ...[
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: swatchColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppColors.white : AppColors.white2,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppColors.white : AppColors.black1,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -909,6 +1235,47 @@ class _ReviewCard extends StatelessWidget {
   }
 }
 
+class _ExpandableDetailsSection extends StatelessWidget {
+  const _ExpandableDetailsSection({
+    required this.title,
+    required this.child,
+    this.initiallyExpanded = false,
+  });
+
+  final String title;
+  final Widget child;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.white2),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.black1,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          children: [Align(alignment: Alignment.centerLeft, child: child)],
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   final String title;
 
@@ -922,6 +1289,335 @@ class _SectionTitle extends StatelessWidget {
         color: AppColors.black1,
         fontSize: 16,
         fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+class _SellerCertificatesSection extends StatelessWidget {
+  final String seller;
+  final List certificates;
+
+  const _SellerCertificatesSection({
+    required this.seller,
+    required this.certificates,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDemoRecords = certificates.any(
+      (certificate) => certificate is Map && certificate['isDemo'] == true,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionTitle(title: 'Seller certificates'),
+        const SizedBox(height: 4),
+        Text(
+          hasDemoRecords
+              ? 'Sample previews only. No seller documents are attached.'
+              : 'Documents shared by $seller',
+          style: const TextStyle(
+            color: AppColors.black2,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (certificates.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white1,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.white2),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.description_outlined, color: AppColors.black2),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'The seller has not shared certificate photos for this listing.',
+                    style: TextStyle(
+                      color: AppColors.black2,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 174,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: certificates.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final rawCertificate = certificates[index];
+                final certificate = rawCertificate is Map
+                    ? rawCertificate
+                    : const <String, dynamic>{};
+                return _SellerCertificateCard(
+                  seller: seller,
+                  certificate: certificate,
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SellerCertificateCard extends StatelessWidget {
+  final String seller;
+  final Map certificate;
+
+  const _SellerCertificateCard({
+    required this.seller,
+    required this.certificate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = (certificate['title'] ??
+            certificate['name'] ??
+            certificate['type'] ??
+            'Seller document')
+        .toString();
+    final image = (certificate['imageUrl'] ??
+            certificate['photo'] ??
+            certificate['image'] ??
+            '')
+        .toString();
+    final registrationNumber =
+        (certificate['registrationNumber'] ?? certificate['number'] ?? '')
+            .toString();
+    final isDemo = certificate['isDemo'] == true;
+    final status =
+        (certificate['status'] ?? (isDemo ? 'Sample' : 'Shared')).toString();
+
+    return InkWell(
+      onTap: () => _showCertificatePreview(
+        context,
+        title: title,
+        seller: seller,
+        image: image,
+        registrationNumber: registrationNumber,
+        isDemo: isDemo,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 204,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.white2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: image.isEmpty
+                      ? _CertificatePhotoPlaceholder(isDemo: isDemo)
+                      : _certificateImage(
+                          image,
+                          fit: BoxFit.cover,
+                          isDemo: isDemo,
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.black1,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  status,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: isDemo ? AppColors.black2 : AppColors.success,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            if (registrationNumber.isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                registrationNumber,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.black2,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _showCertificatePreview(
+  BuildContext context, {
+  required String title,
+  required String seller,
+  required String image,
+  required String registrationNumber,
+  required bool isDemo,
+}) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      backgroundColor: AppColors.white,
+      insetPadding: const EdgeInsets.all(20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppColors.black1,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close preview',
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              Text(
+                'Seller: $seller',
+                style: const TextStyle(color: AppColors.black2, fontSize: 12),
+              ),
+              if (registrationNumber.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Text(
+                  registrationNumber,
+                  style: const TextStyle(
+                    color: AppColors.black2,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              SizedBox(
+                height: MediaQuery.sizeOf(context).height * 0.55,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: image.isEmpty
+                      ? _CertificatePhotoPlaceholder(isDemo: isDemo)
+                      : InteractiveViewer(
+                          minScale: 1,
+                          maxScale: 4,
+                          child: Center(
+                            child: _certificateImage(
+                              image,
+                              fit: BoxFit.contain,
+                              isDemo: isDemo,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _certificateImage(
+  String source, {
+  required BoxFit fit,
+  required bool isDemo,
+}) {
+  Widget buildFallback(BuildContext context, Object error, StackTrace? stack) {
+    return _CertificatePhotoPlaceholder(isDemo: isDemo);
+  }
+
+  if (source.startsWith('http')) {
+    return Image.network(
+      source,
+      fit: fit,
+      errorBuilder: buildFallback,
+    );
+  }
+  return Image.asset(
+    source,
+    fit: fit,
+    errorBuilder: buildFallback,
+  );
+}
+
+class _CertificatePhotoPlaceholder extends StatelessWidget {
+  final bool isDemo;
+
+  const _CertificatePhotoPlaceholder({required this.isDemo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.white1,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isDemo ? Icons.description_outlined : Icons.photo_outlined,
+            color: AppColors.primary1,
+            size: 26,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            isDemo ? 'SAMPLE PREVIEW' : 'PHOTO NOT PROVIDED',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.black2,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -999,7 +1695,7 @@ class _BottomActionBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: controller.buyNow,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary2,
                 foregroundColor: AppColors.white,

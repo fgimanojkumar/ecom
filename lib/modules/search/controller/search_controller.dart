@@ -2,10 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     show ScrollController, TextEditingController;
 import 'package:get/get.dart';
+import '../../cart/controller/cart_controller.dart';
 
 class SearchController extends GetxController {
+  static SearchController ensureInitialized() {
+    if (Get.isRegistered<SearchController>()) {
+      return Get.find<SearchController>();
+    }
+    return Get.put(SearchController(), permanent: true);
+  }
+
   final RxString searchQuery = ''.obs;
   final RxBool isGrid = true.obs;
+  bool _hasInitializedLayoutMode = false;
   final RxList<String> selectedCategories = <String>[].obs;
   final RxDouble minRating = 0.0.obs;
   final RxBool inStockOnly = false.obs;
@@ -138,19 +147,21 @@ class SearchController extends GetxController {
   ];
 
   final RxList<String> recentSearches = <String>[
-    'Cold Drinks',
-    'Cooking oil',
-    'Instant Noodles',
+    'Fresh Red Apples',
+    'Fresh Broccoli',
+    'Orange Juice',
   ].obs;
 
   final List<Map<String, dynamic>> _allProducts = <Map<String, dynamic>>[
     {
-      'name': 'Vibrant Fruit Platter',
+      'name': 'Fresh Red Apples',
       'image': '🍎',
       'seller': 'Philip',
       'rating': '4.9',
-      'price': '\$20.78',
-      'oldPrice': '\$30.00',
+      'price': '₹20.78',
+      'oldPrice': '₹30.00',
+      'isSponsored': true,
+      'lowestPrice30Days': 19.99,
       'category': 'Fruits',
       'stock': 12,
       'isNew': true,
@@ -168,12 +179,12 @@ class SearchController extends GetxController {
       'freeDelivery': true,
     },
     {
-      'name': 'Eden\'s Strawberry',
+      'name': 'Sweet Strawberries',
       'image': '🍓',
       'seller': 'Arlene',
       'rating': '4.9',
-      'price': '\$26.78',
-      'oldPrice': '\$30.00',
+      'price': '₹26.78',
+      'oldPrice': '₹30.00',
       'category': 'Fruits',
       'stock': 5,
       'isNew': false,
@@ -191,12 +202,12 @@ class SearchController extends GetxController {
       'freeDelivery': false,
     },
     {
-      'name': 'Sunburst Orange',
+      'name': 'Juicy Oranges',
       'image': '🍊',
       'seller': 'Warren',
       'rating': '4.7',
-      'price': '\$15.50',
-      'oldPrice': '\$22.00',
+      'price': '₹15.50',
+      'oldPrice': '₹22.00',
       'category': 'Fruits',
       'stock': 9,
       'isNew': false,
@@ -218,8 +229,8 @@ class SearchController extends GetxController {
       'image': '🍇',
       'seller': 'Ferrari',
       'rating': '4.8',
-      'price': '\$18.99',
-      'oldPrice': '\$24.99',
+      'price': '₹18.99',
+      'oldPrice': '₹24.99',
       'category': 'Fruits',
       'stock': 0,
       'isNew': true,
@@ -241,8 +252,8 @@ class SearchController extends GetxController {
       'image': '🥦',
       'seller': 'Kylie',
       'rating': '4.6',
-      'price': '\$12.50',
-      'oldPrice': '\$16.00',
+      'price': '₹12.50',
+      'oldPrice': '₹16.00',
       'category': 'Vegetables',
       'stock': 18,
       'isNew': false,
@@ -264,8 +275,8 @@ class SearchController extends GetxController {
       'image': '🧃',
       'seller': 'Philip',
       'rating': '4.5',
-      'price': '\$9.90',
-      'oldPrice': '\$12.00',
+      'price': '₹9.90',
+      'oldPrice': '₹12.00',
       'category': 'Beverages',
       'stock': 14,
       'isNew': false,
@@ -287,8 +298,8 @@ class SearchController extends GetxController {
       'image': '🍗',
       'seller': 'Warren',
       'rating': '4.4',
-      'price': '\$29.00',
-      'oldPrice': '\$34.00',
+      'price': '₹29.00',
+      'oldPrice': '₹34.00',
       'category': 'Meat',
       'stock': 7,
       'isNew': true,
@@ -320,8 +331,10 @@ class SearchController extends GetxController {
         'image': 'https://picsum.photos/300?random=${i + 10}',
         'seller': sellers[i % sellers.length],
         'rating': '${3.5 + (i % 15) * 0.1}',
-        'price': '\$$price',
-        'oldPrice': '\$$old',
+        'price': '₹$price',
+        'oldPrice': '₹$old',
+        'isSponsored': i % 12 == 0,
+        'lowestPrice30Days': price - 1.5,
         'category': cats[i % cats.length],
         'stock': i % 5 == 0 ? 0 : 5 + (i % 20),
         'isNew': i % 7 == 0,
@@ -358,6 +371,23 @@ class SearchController extends GetxController {
     products.assignAll(_allProducts);
     favorites.assignAll(List<bool>.filled(_allProducts.length, false));
     scrollController.addListener(_onScroll);
+    final arguments = Get.arguments;
+    final initialQuery = arguments is String
+        ? arguments
+        : arguments is Map
+            ? (arguments['query']?.toString() ?? '')
+            : '';
+    if (initialQuery.trim().isNotEmpty) {
+      submitSearch(initialQuery);
+    } else {
+      applyFilters();
+    }
+  }
+
+  void initializeLayoutMode(double screenWidth) {
+    if (_hasInitializedLayoutMode) return;
+    isGrid.value = screenWidth >= 600;
+    _hasInitializedLayoutMode = true;
   }
 
   @override
@@ -391,6 +421,59 @@ class SearchController extends GetxController {
     applyFilters();
   }
 
+  void submitSearch(String query) {
+    final normalizedQuery = query.trim();
+    searchTextController.text = normalizedQuery;
+    searchQuery.value = normalizedQuery;
+    if (normalizedQuery.isNotEmpty) {
+      recentSearches.removeWhere(
+        (recent) => recent.toLowerCase() == normalizedQuery.toLowerCase(),
+      );
+      recentSearches.insert(0, normalizedQuery);
+      if (recentSearches.length > 8) {
+        recentSearches.removeRange(8, recentSearches.length);
+      }
+    }
+    applyFilters();
+  }
+
+  void applyRouteQuery(String query) {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isNotEmpty && searchQuery.value != normalizedQuery) {
+      submitSearch(normalizedQuery);
+    }
+  }
+
+  List<String> autocompleteOptions(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return recentSearches.take(8).toList();
+
+    final matches = <String>[];
+    final seen = <String>{};
+    for (final product in _allProducts) {
+      final name = (product['name'] as String? ?? '').trim();
+      final seller = (product['seller'] as String? ?? '').toLowerCase();
+      final category = (product['category'] as String? ?? '').toLowerCase();
+      if (name.isEmpty ||
+          (!name.toLowerCase().contains(normalizedQuery) &&
+              !seller.contains(normalizedQuery) &&
+              !category.contains(normalizedQuery))) {
+        continue;
+      }
+      if (seen.add(name.toLowerCase())) matches.add(name);
+      if (matches.length == 8) break;
+    }
+    return matches;
+  }
+
+  void openProductDetails(int index) {
+    if (index < 0 || index >= products.length) return;
+    Get.toNamed(
+      '/productDetails',
+      arguments: Map<String, dynamic>.from(products[index]),
+    );
+  }
+
   void clearSearch() {
     searchQuery.value = '';
     searchTextController.clear();
@@ -421,8 +504,7 @@ class SearchController extends GetxController {
   }
 
   void selectRecentSearch(String search) {
-    searchQuery.value = search;
-    applyFilters();
+    submitSearch(search);
   }
 
   void removeRecentSearch(String search) {
@@ -439,14 +521,20 @@ class SearchController extends GetxController {
   }
 
   void addToCart(int index) {
-    if (index < products.length) {
-      final product = products[index];
-      Get.snackbar(
-        'Added to Cart',
-        '${product['name']} added to your cart',
-        duration: const Duration(seconds: 2),
-      );
-    }
+    if (index < 0 || index >= products.length) return;
+
+    final product = products[index];
+    final price = _parseMoney(product['price']);
+    CartController.ensureInitialized().addMapProductToCart({
+      ...product,
+      'id': product['id'] ?? 'search_$index',
+      'price': price,
+      'originalPrice': _parseMoney(product['oldPrice']),
+      'rating': _parseDouble(product['rating']),
+      'reviewCount': 20 + (index * 7),
+      'category': product['category'] ?? 'General',
+      'stock': product['stock'] ?? 50,
+    });
   }
 
   void updatePriceRange(double min, double max) {
@@ -608,7 +696,10 @@ class SearchController extends GetxController {
       final List<String> exploreTags =
           exploreRaw.map((e) => e.toString()).toList();
 
-      final bool matchesQuery = query.isEmpty || name.contains(query);
+      final bool matchesQuery = query.isEmpty ||
+          name.contains(query) ||
+          seller.toLowerCase().contains(query) ||
+          category.toLowerCase().contains(query);
       final bool matchesCategory =
           selectedCategories.isEmpty || selectedCategories.contains(category);
       final bool matchesRating = rating >= minRating.value;

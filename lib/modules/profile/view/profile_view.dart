@@ -1,12 +1,11 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../shared/demo/demo_account_store.dart';
 import '../../../shared/style/app_colors.dart';
 import '../../../shared/utils/responsive_util.dart';
-import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/dialogs.dart';
+import '../../../shared/widgets/common_input_field.dart';
 import '../../../shared/widgets/premium_app_bar.dart';
 import '../controller/profile_controller.dart';
 import 'profile_photo_upload_bottomsheet.dart';
@@ -18,10 +17,7 @@ class ProfileView extends GetView<ProfileController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      appBar: const PremiumAppBar(
-        title: 'Profile',
-        showBackButton: true,
-      ),
+      appBar: const PremiumAppBar(title: 'Profile', showBackButton: true),
       body: ResponsiveContent(
         addHorizontalPadding: true,
         child: _ProfileContent(controller: controller),
@@ -41,17 +37,73 @@ class _ProfileContent extends StatefulWidget {
 
 class _ProfileContentState extends State<_ProfileContent> {
   final Dialogs _dialogs = Dialogs();
-  bool _showProfileUpdateForm = false;
+  bool _editingProfile = false;
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
 
+  final _menuItems = const <_ProfileMenuEntry>[
+    _ProfileMenuEntry(
+      title: 'Personal information',
+      subtitle: 'Edit your name and contact details',
+      icon: Icons.person_outline_rounded,
+      route: '',
+      isEditAction: true,
+    ),
+    _ProfileMenuEntry(
+      title: 'My Orders',
+      subtitle: 'Order history and tracking',
+      icon: Icons.shopping_bag_outlined,
+      route: '/myOrders',
+    ),
+    _ProfileMenuEntry(
+      title: 'Manage Addresses',
+      subtitle: 'Delivery locations',
+      icon: Icons.location_on_outlined,
+      route: '/address',
+    ),
+    _ProfileMenuEntry(
+      title: 'Payment Methods',
+      subtitle: 'Available checkout methods',
+      icon: Icons.credit_card_outlined,
+      route: '/paymentMethods',
+    ),
+    _ProfileMenuEntry(
+      title: 'My Coupons',
+      subtitle: 'Offers and vouchers',
+      icon: Icons.local_offer_outlined,
+      route: '/coupons',
+    ),
+    _ProfileMenuEntry(
+      title: 'Return & Refund Status',
+      subtitle: 'Track an order return',
+      icon: Icons.assignment_return_outlined,
+      route: '/returnStatus',
+    ),
+    _ProfileMenuEntry(
+      title: 'Refer & Earn',
+      subtitle: 'Invite friends',
+      icon: Icons.card_giftcard_outlined,
+      route: '/referAndEarn',
+    ),
+    _ProfileMenuEntry(
+      title: 'Settings',
+      subtitle: 'App preferences',
+      icon: Icons.settings_outlined,
+      route: '/settings',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: 'Jennifer Aaker');
-    _emailController = TextEditingController(text: 'jennifer@email.com');
-    _phoneController = TextEditingController(text: '+91 9876543210');
+    final user = DemoAccountStore.activeUser.value ?? DemoAccountStore.demoUser;
+    _nameController =
+        TextEditingController(text: user['name']?.toString() ?? '');
+    _emailController =
+        TextEditingController(text: user['email']?.toString() ?? '');
+    _phoneController =
+        TextEditingController(text: user['phone']?.toString() ?? '');
   }
 
   @override
@@ -62,545 +114,431 @@ class _ProfileContentState extends State<_ProfileContent> {
     super.dispose();
   }
 
-  void _onMenuTap(_ProfileMenuItemData item) {
-    if (item.title == 'Your Profile') {
-      setState(() => _showProfileUpdateForm = true);
-      return;
-    }
-
-    try {
-      Get.toNamed(item.route);
-    } catch (_) {
-      AppToast.errorToast('${item.title} screen is not available yet.');
-    }
+  void _openProfileEditor() {
+    final user = DemoAccountStore.activeUser.value ?? DemoAccountStore.demoUser;
+    _nameController.text = user['name']?.toString() ?? '';
+    _emailController.text = user['email']?.toString() ?? '';
+    _phoneController.text = user['phone']?.toString() ?? '';
+    setState(() => _editingProfile = true);
   }
 
-  void _onSaveProfile() {
-    AppToast.successToast('Profile updated successfully');
-    setState(() => _showProfileUpdateForm = false);
+  void _saveProfile() {
+    DemoAccountStore.updateProfile(
+      name: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+    );
+    setState(() => _editingProfile = false);
+    Get.snackbar('Profile updated', 'Your details have been saved.');
+  }
+
+  void _onMenuTap(_ProfileMenuEntry item) {
+    if (item.isEditAction) {
+      _openProfileEditor();
+    } else {
+      Get.toNamed(item.route);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final menuItems = <_ProfileMenuItemData>[
-      const _ProfileMenuItemData(
-        title: 'Your Profile',
-        subtitle: 'Personal information',
-        icon: Icons.person_outline_rounded,
-        route: '/profileInfo',
-      ),
-      const _ProfileMenuItemData(
-        title: 'Manage Address',
-        subtitle: 'Shipping locations',
-        icon: Icons.location_on_outlined,
-        route: '/address',
-      ),
-      const _ProfileMenuItemData(
-        title: 'Payment Methods',
-        subtitle: 'Saved cards & UPI',
-        icon: Icons.credit_card_outlined,
-        route: '/payment',
-      ),
-      const _ProfileMenuItemData(
-        title: 'My Orders',
-        subtitle: 'Order history',
-        icon: Icons.shopping_bag_outlined,
-        route: '/myOrders',
-      ),
-      const _ProfileMenuItemData(
-        title: 'My Coupons',
-        subtitle: 'Offers and vouchers',
-        icon: Icons.local_offer_outlined,
-        route: '/coupons',
-      ),
-      const _ProfileMenuItemData(
-        title: 'My Wallet',
-        subtitle: 'Balance and transactions',
-        icon: Icons.account_balance_wallet_outlined,
-        route: '/wallet',
-      ),
-      const _ProfileMenuItemData(
-        title: 'Settings',
-        subtitle: 'App preferences',
-        icon: Icons.settings_outlined,
-        route: '/settings',
-      ),
-    ];
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 260),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      child: SingleChildScrollView(
-        key: ValueKey(_showProfileUpdateForm ? 'profile-form' : 'profile-main'),
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
-        child: Column(
-          children: [
-            _ProfileIdentityCard(controller: widget.controller),
-            const SizedBox(height: 20),
-            if (_showProfileUpdateForm)
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFECECEC)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x10000000),
-                      blurRadius: 18,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ProfileSummaryCard(
+                controller: widget.controller,
+                onEditProfilePressed: _openProfileEditor,
+              ),
+              const SizedBox(height: 18),
+              if (_editingProfile) _buildProfileEditor() else _buildMenu(),
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                onPressed: () => _dialogs.logoutConfirm(
+                  'Log out?',
+                  'Are you sure you want to log out from this device?',
                 ),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Update Profile',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF222222),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _ProfileFormField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                    ),
-                    const SizedBox(height: 12),
-                    _ProfileFormField(
-                      controller: _emailController,
-                      label: 'Email',
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 12),
-                    _ProfileFormField(
-                      controller: _phoneController,
-                      label: 'Phone',
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _onSaveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C4CE6),
-                          foregroundColor: AppColors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() => _showProfileUpdateForm = false);
-                      },
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Color(0xFF888888)),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else ...[
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFECECEC)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x10000000),
-                      blurRadius: 18,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: menuItems.length,
-                  separatorBuilder: (_, __) => const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: Color(0xFFECECEC),
-                  ),
-                  itemBuilder: (context, index) {
-                    return _ProfileMenuItem(
-                      item: menuItems[index],
-                      onTap: () => _onMenuTap(menuItems[index]),
-                    );
-                  },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Log out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side:
+                      BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
+                  minimumSize: const Size.fromHeight(48),
                 ),
               ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () => _dialogs.logoutConfirm(
-                    'Are you sure want to logout',
-                    'Are you sure you want to log out from this device?',
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFFFD8D8)),
-                    backgroundColor: const Color(0xFFFFFAFA),
-                    foregroundColor: const Color(0xFFE14A4A),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  icon: const Icon(Icons.logout_rounded, size: 19),
-                  label: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'Delete Account',
-                  style: TextStyle(
-                    color: Color(0xFFE38C8C),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+              Center(
+                child: TextButton(
+                  onPressed: _showDeleteAccountInfo,
+                  child: const Text('Delete account'),
                 ),
               ),
             ],
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileEditor() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.white2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Personal information',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 14),
+          _ProfileField(controller: _nameController, label: 'Full name'),
+          const SizedBox(height: 12),
+          _ProfileField(
+            controller: _emailController,
+            label: 'Email',
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 12),
+          _ProfileField(
+            controller: _phoneController,
+            label: 'Mobile number',
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _editingProfile = false),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _saveProfile,
+                  child: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenu() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.white2),
+      ),
+      child: Column(
+        children: [
+          for (var index = 0; index < _menuItems.length; index++) ...[
+            _ProfileMenuTile(
+              item: _menuItems[index],
+              onTap: () => _onMenuTap(_menuItems[index]),
+            ),
+            if (index < _menuItems.length - 1)
+              const Divider(height: 1, indent: 58),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountInfo() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Delete account'),
+        content: const Text(
+          'Account deletion is not connected in this local demo. Contact support to request deletion of a production account.',
+        ),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text('Close')),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/support');
+            },
+            child: const Text('Contact support'),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ProfileIdentityCard extends StatefulWidget {
-  const _ProfileIdentityCard({required this.controller});
+class _ProfileSummaryCard extends StatelessWidget {
+  const _ProfileSummaryCard({
+    required this.controller,
+    required this.onEditProfilePressed,
+  });
 
   final ProfileController controller;
-
-  @override
-  State<_ProfileIdentityCard> createState() => _ProfileIdentityCardState();
-}
-
-class _ProfileIdentityCardState extends State<_ProfileIdentityCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
+  final VoidCallback onEditProfilePressed;
 
   @override
   Widget build(BuildContext context) {
-    const userName = 'Jennifer Aaker';
-    return Column(
-      children: [
-        GestureDetector(
-          onTapDown: (_) {},
-          onTap: () => _openPhotoSheet(context),
-          child: TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 220),
-            tween: Tween<double>(begin: 1, end: 1),
-            builder: (context, scale, child) {
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: SizedBox(
-              width: 102,
-              height: 102,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.white,
-                          width: 4,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 20,
-                            offset: Offset(0, 8),
+    return Obx(() {
+      final user =
+          DemoAccountStore.activeUser.value ?? DemoAccountStore.demoUser;
+      final selectedImage = controller.selectedImage.value;
+      final name = user['name']?.toString() ?? 'Customer';
+      final email = user['email']?.toString() ?? '';
+      final phone = user['phone']?.toString() ?? '';
+
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.white2),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _openPhotoSheet(context),
+                  child: SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(
+                          child: ClipOval(
+                            child: controller.isLoading.value
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary1,
+                                    ),
+                                  )
+                                : selectedImage == null
+                                    ? Image.network(
+                                        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10',
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            _avatarFallback(),
+                                      )
+                                    : Image.file(
+                                        selectedImage,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            _avatarFallback(),
+                                      ),
                           ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Obx(() {
-                          if (widget.controller.isLoading.value) {
-                            return const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF6C4CE6),
-                                ),
-                              ),
-                            );
-                          }
-
-                          final selectedImage =
-                              widget.controller.selectedImage.value;
-                          if (selectedImage == null) {
-                            return Image.network(
-                              'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: const Color(0xFFF2F2F2),
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  Icons.person_rounded,
-                                  size: 44,
-                                  color: Color(0xFFB0B0B0),
-                                ),
-                              ),
-                            );
-                          }
-
-                          return Image.file(
-                            selectedImage,
-                            fit: BoxFit.cover,
-                          );
-                        }),
-                      ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary1,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.edit_rounded,
+                              color: AppColors.white,
+                              size: 13,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        final value = 1 + (_pulseController.value * 0.09);
-                        return Transform.scale(scale: value, child: child);
-                      },
-                      child: InkWell(
-                        onTap: () => _openPhotoSheet(context),
-                        borderRadius: BorderRadius.circular(30),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6C4CE6),
-                            shape: BoxShape.circle,
-                            border:
-                                Border.all(color: AppColors.white, width: 2),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x226C4CE6),
-                                blurRadius: 10,
-                                offset: Offset(0, 4),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.black1,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
                               ),
+                            ),
+                            const SizedBox(height: 8),
+                            _ProfileContactLine(
+                                icon: Icons.email_outlined, value: email),
+                            if (phone.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              _ProfileContactLine(
+                                  icon: Icons.phone_outlined, value: phone),
                             ],
-                          ),
-                          child: const Icon(
-                            Icons.edit_rounded,
-                            size: 14,
-                            color: AppColors.white,
-                          ),
+                          ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: onEditProfilePressed,
+                        tooltip: 'Edit profile',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(Icons.edit_note_rounded,
+                            color: AppColors.primary1, size: 22),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Divider(height: 1),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.workspace_premium_outlined,
+                    color: AppColors.primary1, size: 22),
+                const SizedBox(width: 9),
+                const Expanded(
+                  child: Text(
+                    'Reward points',
+                    style: TextStyle(
+                      color: AppColors.black1,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
+                ),
+                Text(
+                  '${DemoAccountStore.loyaltyPoints} pts',
+                  style: const TextStyle(
+                    color: AppColors.primary1,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => Get.toNamed('/loyaltyPoints'),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                label: const Text('View rewards'),
               ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 14),
-        Text(
-          userName,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF222222),
-          ),
-        ),
-      ],
-    );
+      );
+    });
   }
+
+  Widget _avatarFallback() => Container(
+        color: AppColors.white1,
+        alignment: Alignment.center,
+        child: const Icon(Icons.person_rounded,
+            size: 38, color: AppColors.muteIconColor),
+      );
 
   void _openPhotoSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (BuildContext context) {
-        return const FractionallySizedBox(child: ProfilePhotoBottomSheet());
-      },
+      builder: (_) => const ProfilePhotoBottomSheet(),
     );
   }
 }
 
-class _ProfileMenuItemData {
-  const _ProfileMenuItemData({
+class _ProfileContactLine extends StatelessWidget {
+  const _ProfileContactLine({required this.icon, required this.value});
+
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: AppColors.black2),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppColors.black2, fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileMenuEntry {
+  const _ProfileMenuEntry({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.route,
+    this.isEditAction = false,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final String route;
+  final bool isEditAction;
 }
 
-class _ProfileMenuItem extends StatefulWidget {
-  const _ProfileMenuItem({required this.item, required this.onTap});
+class _ProfileMenuTile extends StatelessWidget {
+  const _ProfileMenuTile({required this.item, required this.onTap});
 
-  final _ProfileMenuItemData item;
+  final _ProfileMenuEntry item;
   final VoidCallback onTap;
 
   @override
-  State<_ProfileMenuItem> createState() => _ProfileMenuItemState();
-}
-
-class _ProfileMenuItemState extends State<_ProfileMenuItem>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _arrowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _arrowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 180),
-      lowerBound: 0,
-      upperBound: 1,
-      value: 0,
-    );
-  }
-
-  @override
-  void dispose() {
-    _arrowController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: widget.onTap,
-      onHighlightChanged: (value) {
-        if (value) {
-          _arrowController.forward();
-        } else {
-          _arrowController.reverse();
-        }
-      },
-      child: SizedBox(
-        height: 62,
-        child: Row(
-          children: [
-            const SizedBox(width: 14),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3EEFF),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(
-                widget.item.icon,
-                size: 19,
-                color: const Color(0xFF6C4CE6),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.item.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF222222),
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    widget.item.subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF888888),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            AnimatedBuilder(
-              animation: _arrowController,
-              builder: (context, child) {
-                final dx = _arrowController.value * 4;
-                return Transform.translate(
-                  offset: Offset(dx, 0),
-                  child: Transform.rotate(
-                    angle: _arrowController.value * (math.pi / 36),
-                    child: child,
-                  ),
-                );
-              },
-              child: const Icon(
-                Icons.chevron_right_rounded,
-                size: 22,
-                color: Color(0xFFB0B0B0),
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.primary1.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
         ),
+        child: Icon(item.icon, color: AppColors.primary1, size: 19),
       ),
+      title: Text(item.title,
+          style: const TextStyle(
+              color: AppColors.black1, fontWeight: FontWeight.w700)),
+      subtitle: Text(item.subtitle),
+      trailing: const Icon(Icons.chevron_right_rounded,
+          color: AppColors.muteIconColor),
     );
   }
 }
 
-class _ProfileFormField extends StatelessWidget {
-  const _ProfileFormField({
+class _ProfileField extends StatelessWidget {
+  const _ProfileField({
     required this.controller,
     required this.label,
     this.keyboardType,
@@ -612,35 +550,10 @@ class _ProfileFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return CommonInputField.field(
       controller: controller,
       keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(
-          color: Color(0xFF888888),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        filled: true,
-        fillColor: const Color(0xFFFAFAFA),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFECECEC)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFECECEC)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF6C4CE6), width: 1.2),
-        ),
-      ),
+      labelText: label,
     );
   }
 }

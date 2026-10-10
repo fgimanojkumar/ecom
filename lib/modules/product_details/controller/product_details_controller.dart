@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../cart/controller/cart_controller.dart';
+import '../../wishlist/controller/wishlist_controller.dart';
 import '../../../data/models/product_model.dart';
 import '../../../shared/widgets/app_toast.dart';
 
@@ -11,6 +12,7 @@ class ProductDetailsController extends GetxController {
   final selectedCategory = ''.obs;
   final selectedImageIndex = 0.obs;
   final quantity = 1.obs;
+  final isWishlisted = false.obs;
   final PageController imagePageController = PageController();
 
   final product = {
@@ -37,6 +39,18 @@ class ProductDetailsController extends GetxController {
     'colors': ['Black', 'Silver', 'Gold'],
     'delivery': 'Free delivery by Tomorrow',
     'seller': 'RetailNet Official',
+    'sellerCertified': null,
+    'isBestSeller': false,
+    'sellerCertificates': [
+      {
+        'title': 'GST registration',
+        'imageUrl':
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10',
+        'isDemo': true,
+      },
+      {'title': 'FSSAI license', 'isDemo': true},
+      {'title': 'Other seller certificate', 'isDemo': true},
+    ],
     'inStock': true,
     'features': [
       'Active Noise Cancellation',
@@ -106,6 +120,10 @@ class ProductDetailsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    final arguments = Get.arguments;
+    if (arguments is Map) {
+      _loadProduct(arguments);
+    }
     final sizes = (product['sizes'] as List?) ?? [];
     final colors = (product['colors'] as List?) ?? [];
     final categories = (product['categories'] as List?) ?? [];
@@ -115,6 +133,80 @@ class ProductDetailsController extends GetxController {
     if (categories.isNotEmpty) {
       selectedCategory.value = categories.first.toString();
     }
+    isWishlisted.value = WishlistController.ensureInitialized()
+        .isWishlisted(product['id'].toString());
+  }
+
+  void _loadProduct(Map arguments) {
+    double parsePrice(dynamic value, [double fallback = 0]) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(
+            (value ?? '').toString().replaceAll(RegExp(r'[^0-9.]'), ''),
+          ) ??
+          fallback;
+    }
+
+    List<dynamic> asList(dynamic value) =>
+        value is List ? List<dynamic>.from(value) : <dynamic>[];
+
+    final price = parsePrice(arguments['price']);
+    final originalPrice =
+        parsePrice(arguments['originalPrice'] ?? arguments['oldPrice'], price);
+    final image = arguments['image']?.toString() ?? '';
+    final rawImages = asList(arguments['images']);
+    final images = rawImages.isNotEmpty
+        ? rawImages
+        : image.isNotEmpty
+            ? <dynamic>[image]
+            : asList(product['images']);
+    final rawCategories = asList(arguments['categories']);
+    final categories = rawCategories.isNotEmpty
+        ? rawCategories
+        : <dynamic>[arguments['category']?.toString() ?? 'General'];
+    final stock = arguments['stock'];
+    final certificationValue =
+        arguments['sellerCertified'] ?? arguments['isSellerCertified'];
+    final bestSellerValue =
+        arguments['isBestSeller'] ?? arguments['bestSeller'];
+
+    product.addAll({
+      'id':
+          (arguments['id'] ?? DateTime.now().microsecondsSinceEpoch).toString(),
+      'name': arguments['name']?.toString() ?? 'Product',
+      'brand': arguments['brand']?.toString() ??
+          arguments['seller']?.toString() ??
+          'Store',
+      'categories': categories,
+      'price': price,
+      'originalPrice': originalPrice,
+      'rating': parsePrice(arguments['rating'], 4.0),
+      'reviewCount': (arguments['reviewCount'] as num?)?.toInt() ?? 0,
+      'ratingBreakdown': arguments['ratingBreakdown'] is Map
+          ? arguments['ratingBreakdown']
+          : <String, int>{},
+      'description': arguments['description']?.toString() ??
+          'Product details are available from the seller.',
+      'images': images,
+      'sizes': asList(arguments['sizes']),
+      'colors': asList(arguments['colors']),
+      'delivery':
+          arguments['delivery']?.toString() ?? 'Delivery within 5-7 days',
+      'seller': arguments['seller']?.toString() ?? 'Verified seller',
+      'sellerCertified': certificationValue is bool ? certificationValue : null,
+      'isBestSeller': bestSellerValue == true,
+      'sellerCertificates': asList(
+        arguments['sellerCertificates'] ?? product['sellerCertificates'],
+      ),
+      'inStock':
+          arguments['inStock'] as bool? ?? ((stock as num?)?.toInt() ?? 1) > 0,
+      'features': asList(arguments['features']),
+      'benefits': asList(arguments['benefits']),
+      'howToUse': asList(arguments['howToUse']),
+      'ingredients': asList(arguments['ingredients']),
+      'warnings': asList(arguments['warnings']),
+      'relatedProducts': asList(arguments['relatedProducts']),
+      'reviews': asList(arguments['reviews']),
+    });
   }
 
   @override
@@ -141,7 +233,8 @@ class ProductDetailsController extends GetxController {
   }
 
   void addToCart() {
-    if (selectedColor.isEmpty) {
+    final colors = (product['colors'] as List?) ?? const [];
+    if (colors.isNotEmpty && selectedColor.isEmpty) {
       AppToast.errorToast('Please select a color');
       return;
     }
@@ -183,8 +276,21 @@ class ProductDetailsController extends GetxController {
       color: selectedColor.value,
       quantity: quantity.value,
     );
+  }
 
-    final productName = (productData['name'] ?? 'Product').toString();
-    AppToast.successToast('$productName added in cart');
+  void toggleWishlist() {
+    final wishlist = WishlistController.ensureInitialized();
+    wishlist.toggleProduct(Map<String, dynamic>.from(product));
+    isWishlisted.value = wishlist.isWishlisted(product['id'].toString());
+  }
+
+  void buyNow() {
+    final colors = (product['colors'] as List?) ?? const [];
+    if (colors.isNotEmpty && selectedColor.isEmpty) {
+      AppToast.errorToast('Please select a color');
+      return;
+    }
+    addToCart();
+    Get.toNamed('/checkout');
   }
 }

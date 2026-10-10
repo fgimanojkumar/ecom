@@ -2,6 +2,7 @@ import 'package:imoss/shared/style/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:imoss/shared/utils/responsive_util.dart';
+import 'package:imoss/shared/widgets/common_input_field.dart';
 import 'package:imoss/shared/widgets/premium_app_bar.dart';
 
 import '../controller/support_controller.dart';
@@ -50,24 +51,22 @@ class _SupportViewState extends State<SupportView>
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
+                child: SizedBox(
                   height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.white1,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: TextField(
+                  child: CommonInputField.field(
                     onChanged: controller.updateSearch,
-                    decoration: const InputDecoration(
+                    hintText: 'Search',
+                    radius: 18,
+                    prefixWidget: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.muteIconColor,
+                    ),
+                    decorationOverride: const InputDecoration(
                       hintText: 'Search',
                       hintStyle: TextStyle(
                         color: AppColors.muteIconColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: AppColors.muteIconColor,
                       ),
                       border: InputBorder.none,
                     ),

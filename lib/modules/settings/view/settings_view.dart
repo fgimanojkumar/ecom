@@ -45,7 +45,7 @@ class SettingsView extends GetView<SettingsController> {
                     _SettingsTile(
                       icon: Icons.payment,
                       title: 'Payment Methods',
-                      onTap: () {},
+                      onTap: () => Get.toNamed('/paymentMethods'),
                     ),
                   ],
                 ),
