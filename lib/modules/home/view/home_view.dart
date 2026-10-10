@@ -1,30 +1,36 @@
-﻿import 'dart:async';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../shared/style/app_colors.dart';
 import '../../../shared/style/app_text_style.dart';
+import '../../../shared/widgets/app_update_dialog.dart';
 import '../../../shared/widgets/common_app_drawer.dart';
-import '../../../shared/widgets/common_input_field.dart';
+import '../../../shared/widgets/emergency_alert_popup.dart';
 import '../../../shared/widgets/exit_app_pop_up.dart';
 import '../../../shared/widgets/premium_bottom_bar.dart';
+import '../../../shared/widgets/premium_app_bar.dart';
 import '../../../shared/widgets/premium_category_card.dart';
 import '../../../shared/widgets/premium_product_card.dart';
+import '../../address/controller/address_controller.dart';
 import '../../cart/controller/cart_controller.dart';
 import '../controller/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
 
-  static const double _headerOverlayHeight = 130;
-  static const double _headerWithBannerHeight = 172;
-
   @override
   Widget build(BuildContext context) {
+    final addressController = AddressController.ensureInitialized();
     final cartController = CartController.ensureInitialized();
     final banners = controller.banners;
     final hasBanners = banners.isNotEmpty;
+    final isWeb = kIsWeb;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isTabletLayout = screenWidth >= 600 && screenWidth < 1024;
+    final isWideLayout = screenWidth >= 1024;
 
     return PopScope(
       canPop: false,
@@ -37,6 +43,10 @@ class HomeView extends GetView<HomeController> {
       child: Scaffold(
         drawer: const CommonAppDrawer(),
         backgroundColor: Colors.white,
+        appBar: PremiumAppBar(
+          title: 'home',
+          showBackButton: false,
+        ),
         body: SafeArea(
           bottom: false,
           child: Stack(
@@ -44,686 +54,684 @@ class HomeView extends GetView<HomeController> {
             children: [
               Column(
                 children: [
-                  Obx(
-                    () => SizedBox(
-                      height: controller.showEmergencyBanner.value
-                          ? _headerWithBannerHeight
-                          : _headerOverlayHeight,
-                    ),
-                  ),
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: () async =>
                           Future.delayed(const Duration(seconds: 1)),
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // ─── [1] BANNER SLIDER START ─────────────────────────
-                            SizedBox(
-                              height: 160,
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white,
-                                      borderRadius: BorderRadius.circular(22),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color:
-                                              AppColors.black.withOpacity(0.12),
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 10),
+                        padding: EdgeInsets.fromLTRB(
+                          isWideLayout ? 28 : 0,
+                          8,
+                          isWideLayout ? 28 : 0,
+                          isWeb ? 24 : 100,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isWideLayout ? 1440 : double.infinity,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () =>
+                                              showEmergencyAlertDialog(context),
+                                          icon: const Icon(
+                                              Icons.warning_amber_rounded,
+                                              color: AppColors.error),
+                                          label: const Text(
+                                              'Test Emergency Alert'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AppColors.error,
+                                            side: const BorderSide(
+                                                color: AppColors.error),
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
                                         ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(0),
-                                      child: hasBanners
-                                          ? PageView.builder(
-                                              controller: controller
-                                                  .bannerPageController,
-                                              itemCount: banners.length,
-                                              onPageChanged: (i) => controller
-                                                  .currentBannerIndex.value = i,
-                                              itemBuilder: (context, index) {
-                                                final banner = banners[index];
-                                                final bannerTitle =
-                                                    (banner['title'] ?? '')
-                                                        .toString();
-                                                final bannerSubtitle =
-                                                    (banner['subtitle'] ?? '')
-                                                        .toString();
-                                                final bannerImage =
-                                                    (banner['image'] ?? '')
-                                                        .toString();
-                                                final color1 = banner['color1']
-                                                        is Color
-                                                    ? banner['color1'] as Color
-                                                    : const Color(0xFFD884A7);
-                                                final color2 = banner['color2']
-                                                        is Color
-                                                    ? banner['color2'] as Color
-                                                    : const Color(0xFFC66D98);
+                                      ),
+                                      const SizedBox(height: 10),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () =>
+                                              AppUpdateDialog.showTestDialog(
+                                                  force: false),
+                                          icon: const Icon(Icons.system_update),
+                                          label:
+                                              const Text('Test Update Dialog'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary1,
+                                            foregroundColor: AppColors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    12,
+                                  ),
+                                  child: Obx(() {
+                                    final address =
+                                        addressController.selectedAddress;
+                                    final addressDetails = [
+                                      address?['street'],
+                                      address?['city'],
+                                      address?['state'],
+                                      address?['pincode'],
+                                    ]
+                                        .where((part) =>
+                                            part != null &&
+                                            part.toString().trim().isNotEmpty)
+                                        .map((part) => part.toString().trim())
+                                        .join(', ');
 
-                                                return Stack(
-                                                  fit: StackFit.expand,
-                                                  children: [
-                                                    Container(
-                                                      decoration: BoxDecoration(
-                                                        gradient:
-                                                            LinearGradient(
-                                                          begin:
-                                                              Alignment.topLeft,
-                                                          end: Alignment
-                                                              .bottomRight,
-                                                          colors: [
-                                                            color1,
-                                                            color2,
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (bannerImage.isNotEmpty)
-                                                      Image.network(
-                                                        bannerImage,
-                                                        fit: BoxFit.cover,
-                                                        errorBuilder:
-                                                            (_, __, ___) =>
-                                                                const SizedBox
-                                                                    .shrink(),
-                                                      ),
-                                                    Container(
-                                                      decoration: BoxDecoration(
-                                                        gradient:
-                                                            LinearGradient(
-                                                          begin:
-                                                              Alignment.topLeft,
-                                                          end: Alignment
-                                                              .bottomRight,
-                                                          colors: [
-                                                            AppColors.black
-                                                                .withOpacity(
-                                                                    .08),
-                                                            AppColors.black
-                                                                .withOpacity(
-                                                                    .52),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      left: 16,
-                                                      top: 18,
-                                                      right: 16,
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: AppColors.white,
+                                        // borderRadius: BorderRadius.circular(12),
+                                        // border: Border.all(
+                                        //   color: AppColors.white2,
+                                        // ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary1
+                                                  .withValues(alpha: 0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(7),
+                                            ),
+                                            child: const Icon(
+                                              Icons.location_on_outlined,
+                                              color: AppColors.primary1,
+                                              size: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              addressDetails.isEmpty
+                                                  ? 'Choose an address'
+                                                  : addressDetails,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: AppColors.black1,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Get.toNamed('/address'),
+                                            style: TextButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                              ),
+                                              minimumSize: const Size(0, 36),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                            child: const Text(
+                                              'Change',
+                                              style: TextStyle(fontSize: 11),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                // --- [1] BANNER SLIDER START -------------------------
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal:
+                                        isWideLayout || isTabletLayout ? 0 : 12,
+                                  ),
+                                  child: SizedBox(
+                                    height: isWideLayout
+                                        ? 320
+                                        : isTabletLayout
+                                            ? 250
+                                            : 168,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: AppColors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(22),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.black
+                                                    .withOpacity(0.12),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, 10),
+                                              ),
+                                            ],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(22),
+                                            child: hasBanners
+                                                ? PageView.builder(
+                                                    controller: controller
+                                                        .bannerPageController,
+                                                    itemCount: banners.length,
+                                                    onPageChanged: (i) =>
+                                                        controller
+                                                            .currentBannerIndex
+                                                            .value = i,
+                                                    itemBuilder:
+                                                        (context, index) {
+                                                      final banner =
+                                                          banners[index];
+                                                      final bannerTitle =
+                                                          (banner['title'] ??
+                                                                  '')
+                                                              .toString();
+                                                      final bannerSubtitle =
+                                                          (banner['subtitle'] ??
+                                                                  '')
+                                                              .toString();
+                                                      final bannerImage =
+                                                          (banner['image'] ??
+                                                                  '')
+                                                              .toString();
+                                                      final color1 =
+                                                          banner['color1']
+                                                                  is Color
+                                                              ? banner['color1']
+                                                                  as Color
+                                                              : const Color(
+                                                                  0xFFD884A7);
+                                                      final color2 =
+                                                          banner['color2']
+                                                                  is Color
+                                                              ? banner['color2']
+                                                                  as Color
+                                                              : const Color(
+                                                                  0xFFC66D98);
+
+                                                      return Stack(
+                                                        fit: StackFit.expand,
                                                         children: [
-                                                          ConstrainedBox(
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                              maxWidth: 210,
-                                                            ),
-                                                            child: Text(
-                                                              bannerTitle,
-                                                              style:
-                                                                  const TextStyle(
-                                                                color: AppColors
-                                                                    .white,
-                                                                fontSize: 22,
-                                                                height: 1.2,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700,
+                                                          Container(
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              gradient:
+                                                                  LinearGradient(
+                                                                begin: Alignment
+                                                                    .topLeft,
+                                                                end: Alignment
+                                                                    .bottomRight,
+                                                                colors: [
+                                                                  color1,
+                                                                  color2,
+                                                                ],
                                                               ),
                                                             ),
                                                           ),
-                                                          const SizedBox(
-                                                              height: 8),
-                                                          Text(
-                                                            bannerSubtitle,
-                                                            style: TextStyle(
-                                                              color: AppColors
-                                                                  .white
-                                                                  .withOpacity(
-                                                                      .9),
-                                                              fontSize: 12,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
+                                                          if (bannerImage
+                                                              .isNotEmpty)
+                                                            Image.network(
+                                                              bannerImage,
+                                                              fit: BoxFit.cover,
+                                                              alignment: isWideLayout
+                                                                  ? Alignment
+                                                                      .centerRight
+                                                                  : Alignment
+                                                                      .center,
+                                                              errorBuilder: (_,
+                                                                      __,
+                                                                      ___) =>
+                                                                  const SizedBox
+                                                                      .shrink(),
                                                             ),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 12),
-                                                          ElevatedButton(
-                                                            onPressed: () =>
-                                                                Get.toNamed(
-                                                                    '/products'),
-                                                            style:
-                                                                ElevatedButton
-                                                                    .styleFrom(
-                                                              backgroundColor:
+                                                          Container(
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              gradient:
+                                                                  LinearGradient(
+                                                                begin: Alignment
+                                                                    .topLeft,
+                                                                end: Alignment
+                                                                    .bottomRight,
+                                                                colors: [
                                                                   AppColors
-                                                                      .white,
-                                                              foregroundColor:
-                                                                  const Color(
-                                                                      0xFF0F6B43),
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                horizontal: 14,
-                                                                vertical: 9,
+                                                                      .black
+                                                                      .withOpacity(
+                                                                          .08),
+                                                                  AppColors
+                                                                      .black
+                                                                      .withOpacity(
+                                                                          .52),
+                                                                ],
                                                               ),
-                                                              shape:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            12),
-                                                              ),
-                                                              elevation: 0,
-                                                              minimumSize:
-                                                                  const Size(
-                                                                      0, 34),
                                                             ),
-                                                            child: const Text(
-                                                              'Shop Now',
-                                                              style: TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700,
-                                                                fontSize: 12,
-                                                              ),
+                                                          ),
+                                                          Positioned(
+                                                            left: isWideLayout
+                                                                ? 40
+                                                                : isTabletLayout
+                                                                    ? 28
+                                                                    : 16,
+                                                            top: isWideLayout
+                                                                ? 36
+                                                                : isTabletLayout
+                                                                    ? 26
+                                                                    : 18,
+                                                            right: 16,
+                                                            child: Column(
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                if (bannerTitle
+                                                                    .isNotEmpty) ...[
+                                                                  ConstrainedBox(
+                                                                    constraints:
+                                                                        BoxConstraints(
+                                                                      maxWidth: isWideLayout
+                                                                          ? 500
+                                                                          : isTabletLayout
+                                                                              ? 380
+                                                                              : 260,
+                                                                    ),
+                                                                    child: Text(
+                                                                      bannerTitle,
+                                                                      maxLines:
+                                                                          2,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: AppColors
+                                                                            .white,
+                                                                        fontSize: isWideLayout
+                                                                            ? 34
+                                                                            : isTabletLayout
+                                                                                ? 28
+                                                                                : 21,
+                                                                        height:
+                                                                            1.15,
+                                                                        fontWeight:
+                                                                            FontWeight.w700,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      height:
+                                                                          8),
+                                                                ],
+                                                                Text(
+                                                                  bannerSubtitle,
+                                                                  maxLines: 2,
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    color: AppColors
+                                                                        .white
+                                                                        .withOpacity(
+                                                                            .9),
+                                                                    fontSize: isWideLayout
+                                                                        ? 15
+                                                                        : isTabletLayout
+                                                                            ? 14
+                                                                            : 12,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w500,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 12),
+                                                                ElevatedButton(
+                                                                  onPressed: () =>
+                                                                      Get.toNamed(
+                                                                          '/home'),
+                                                                  style: ElevatedButton
+                                                                      .styleFrom(
+                                                                    backgroundColor:
+                                                                        AppColors
+                                                                            .white,
+                                                                    foregroundColor:
+                                                                        AppColors
+                                                                            .primary1,
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .symmetric(
+                                                                      horizontal:
+                                                                          15,
+                                                                      vertical:
+                                                                          9,
+                                                                    ),
+                                                                    shape:
+                                                                        RoundedRectangleBorder(
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                              12),
+                                                                    ),
+                                                                    elevation:
+                                                                        0,
+                                                                    minimumSize:
+                                                                        const Size(
+                                                                            0,
+                                                                            34),
+                                                                  ),
+                                                                  child:
+                                                                      const Text(
+                                                                    'Shop Now',
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w700,
+                                                                      fontSize:
+                                                                          12,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
                                                             ),
                                                           ),
                                                         ],
+                                                      );
+                                                    },
+                                                  )
+                                                : Container(
+                                                    color:
+                                                        const Color(0xFFD884A7),
+                                                  ),
+                                          ),
+                                        ),
+                                        if (banners.length > 1)
+                                          Positioned(
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 10,
+                                            child: Obx(
+                                              () => Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: List.generate(
+                                                  banners.length,
+                                                  (i) {
+                                                    final isActive = controller
+                                                            .currentBannerIndex
+                                                            .value ==
+                                                        i;
+                                                    return AnimatedContainer(
+                                                      duration: const Duration(
+                                                          milliseconds: 280),
+                                                      curve: Curves.easeOut,
+                                                      margin: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 3,
                                                       ),
-                                                    ),
-                                                  ],
-                                                );
-                                              },
-                                            )
-                                          : Container(
-                                              color: const Color(0xFFD884A7),
+                                                      width: isActive ? 20 : 6,
+                                                      height: 6,
+                                                      decoration: BoxDecoration(
+                                                        color: isActive
+                                                            ? AppColors.primary1
+                                                            : const Color(
+                                                                0xFFD6D6D6),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
                                             ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                  if (banners.length > 1)
-                                    Positioned(
-                                      left: 0,
-                                      right: 0,
-                                      bottom: 10,
-                                      child: Obx(
-                                        () => Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: List.generate(
-                                            banners.length,
-                                            (i) {
-                                              final isActive = controller
-                                                      .currentBannerIndex
-                                                      .value ==
-                                                  i;
-                                              return AnimatedContainer(
-                                                duration: const Duration(
-                                                    milliseconds: 280),
-                                                curve: Curves.easeOut,
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 3,
-                                                ),
-                                                width: isActive ? 20 : 6,
-                                                height: 6,
-                                                decoration: BoxDecoration(
-                                                  color: isActive
-                                                      ? const Color(0xFF0F6B43)
-                                                      : const Color(0xFFD6D6D6),
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
+                                ),
+                                // --- [1] BANNER SLIDER END ---------------------------
+
+                                // Emergency message below slider � controlled by showEmergencyBanner
+                                Obx(() => controller.showEmergencyBanner.value
+                                    ? Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 10, 16, 0),
+                                        child: _EmergencyBanner(
+                                          message:
+                                              controller.emergencyMessage.value,
+                                          onTap: () => _showHomeInfoSheet(
+                                            context,
+                                            title: 'Important update',
+                                            message: controller
+                                                .emergencyMessage.value,
+                                            isUrgent: true,
+                                          ),
+                                          onClose: () => controller
+                                              .showEmergencyBanner
+                                              .value = false,
+                                        ),
+                                      )
+                                    : const SizedBox.shrink()),
+
+                                const SizedBox(height: 12),
+
+                                // --- [3] CATEGORIES START ----------------------------
+                                _SectionContainer(
+                                  backgroundColor: const Color(0xFFF1F9FF),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _SectionHeader(
+                                        title: 'Categories',
+                                        actionLabel: 'See All',
+                                        onActionTap: () =>
+                                            Get.toNamed('/categories'),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Obx(
+                                        () => SizedBox(
+                                          height: 110,
+                                          child: ListView.separated(
+                                            scrollDirection: Axis.horizontal,
+                                            itemCount:
+                                                controller.categories.length,
+                                            separatorBuilder: (_, __) =>
+                                                const SizedBox(width: 12),
+                                            itemBuilder: (context, index) {
+                                              final cat =
+                                                  controller.categories[index];
+                                              return SizedBox(
+                                                width: 90,
+                                                child: PremiumCategoryCard(
+                                                  name: (cat['name'] ?? '')
+                                                      .toString(),
+                                                  image: (cat['image'] ?? '')
+                                                      .toString(),
+                                                  icon: Icons.category.codePoint
+                                                      .toString(),
+                                                  onTap: () {
+                                                    controller
+                                                        .selectCategory(index);
+                                                  },
                                                 ),
                                               );
                                             },
                                           ),
                                         ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            // ─── [1] BANNER SLIDER END ───────────────────────────
-
-                            // Emergency message below slider — controlled by showEmergencyBanner
-                            Obx(() => controller.showEmergencyBanner.value
-                                ? Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 10, 16, 0),
-                                    child: _EmergencyBanner(
-                                      message:
-                                          controller.emergencyMessage.value,
-                                      onClose: () => controller
-                                          .showEmergencyBanner.value = false,
-                                    ),
-                                  )
-                                : const SizedBox.shrink()),
-
-                            const SizedBox(height: 12),
-
-                            // ─── Social proof bar ────────────────────────────────
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColors.primary1.withOpacity(0.05),
-                                      AppColors.gradientEnd.withOpacity(0.05),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                      color:
-                                          AppColors.primary1.withOpacity(0.12)),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    const _ProofItem(
-                                        icon: Icons.people_rounded,
-                                        label: '50K+',
-                                        sub: 'Customers'),
-                                    _proofDivider(),
-                                    const _ProofItem(
-                                        icon: Icons.star_rounded,
-                                        label: '4.8★',
-                                        sub: 'Rating'),
-                                    _proofDivider(),
-                                    const _ProofItem(
-                                        icon: Icons.replay_rounded,
-                                        label: 'Free',
-                                        sub: 'Returns'),
-                                    _proofDivider(),
-                                    const _ProofItem(
-                                        icon: Icons.verified_rounded,
-                                        label: '100%',
-                                        sub: 'Secure'),
-                                  ],
+                                // --- [3] CATEGORIES END ------------------------------
+
+                                const SizedBox(height: 16),
+                                // --- [2] PROMO OFFERS SECTION START/END --------------
+                                _PromoOffersSection(
+                                  promos: controller.promos.toList(),
                                 ),
-                              ),
-                            ),
+                                const SizedBox(height: 16),
 
-                            const SizedBox(height: 12),
-
-                            // ─── Quick-access chips ──────────────────────────────
-                            SizedBox(
-                              height: 38,
-                              child: ListView(
-                                scrollDirection: Axis.horizontal,
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                                children: const [
-                                  _QuickChip(Icons.local_shipping_rounded,
-                                      'Track Order', '/myOrders'),
-                                  _QuickChip(Icons.favorite_rounded, 'Wishlist',
-                                      '/wishlist'),
-                                  _QuickChip(Icons.local_offer_rounded,
-                                      'Offers', '/coupons'),
-                                  _QuickChip(Icons.support_agent_rounded,
-                                      'Support', '/support'),
-                                  _QuickChip(Icons.card_giftcard_rounded,
-                                      'Refer & Earn', '/referAndEarn'),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // ─── [3] CATEGORIES START ────────────────────────────
-                            _SectionContainer(
-                              backgroundColor: const Color(0xFFF1F9FF),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _SectionHeader(
-                                    title: 'Categories',
-                                    actionLabel: 'See All',
-                                    onActionTap: () =>
-                                        Get.toNamed('/categories'),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Obx(
-                                    () => SizedBox(
-                                      height: 110,
-                                      child: ListView.separated(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount: controller.categories.length,
-                                        separatorBuilder: (_, __) =>
-                                            const SizedBox(width: 12),
-                                        itemBuilder: (context, index) {
-                                          final cat =
-                                              controller.categories[index];
-                                          return SizedBox(
-                                            width: 90,
-                                            child: PremiumCategoryCard(
-                                              name: (cat['name'] ?? '')
-                                                  .toString(),
-                                              image: (cat['image'] ?? '')
-                                                  .toString(),
-                                              icon: Icons.category.codePoint
-                                                  .toString(),
-                                              onTap: () {
-                                                controller
-                                                    .selectCategory(index);
-                                              },
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                // --- [5] TOP PRODUCTS START/END ----------------------
+                                _ProductsStripSection(
+                                  title: 'Top Products',
+                                  backgroundColor: const Color(0xFFEEFCEF),
+                                  actionLabel: 'View All',
+                                  onViewAllTap: () => Get.toNamed('/home'),
+                                  products: controller.topProducts,
+                                  onProductTap: (id) =>
+                                      controller.onProductTap(id),
+                                  onWishlistToggleById: (id) {
+                                    final idx = controller.featuredProducts
+                                        .indexWhere((item) =>
+                                            item['id'].toString() == id);
+                                    if (idx >= 0) {
+                                      controller.toggleWishlist(idx);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 22),
+                                // --- [NEW] DEAL OF THE DAY ---------------------------
+                                if (controller.featuredProducts.isNotEmpty)
+                                  _DealOfTheDaySection(
+                                    product: controller.featuredProducts.first,
+                                    onTap: () => controller.onProductTap(
+                                      controller.featuredProducts.first['id']
+                                              ?.toString() ??
+                                          '',
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            // ─── [3] CATEGORIES END ──────────────────────────────
-
-                            const SizedBox(height: 16),
-                            // ─── [2] PROMO OFFERS SECTION START/END ──────────────
-                            _PromoOffersSection(
-                              promos: controller.promos.toList(),
-                            ),
-                            const SizedBox(height: 16),
-                            // ─── [NEW] FLASH SALE ────────────────────────────────
-                            _FlashSaleSection(
-                              products: controller.featuredProducts.toList(),
-                              onProductTap: controller.onProductTap,
-                            ),
-                            const SizedBox(height: 22),
-
-                            // ─── [5] TOP PRODUCTS START/END ──────────────────────
-                            _ProductsStripSection(
-                              title: 'Top Products',
-                              backgroundColor: const Color(0xFFEEFCEF),
-                              actionLabel: 'View All',
-                              onViewAllTap: () => Get.toNamed('/products'),
-                              products: controller.topProducts,
-                              onProductTap: (id) => controller.onProductTap(id),
-                              onWishlistToggleById: (id) {
-                                final idx = controller.featuredProducts
-                                    .indexWhere(
-                                        (item) => item['id'].toString() == id);
-                                if (idx >= 0) {
-                                  controller.toggleWishlist(idx);
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 22),
-                            // ─── [NEW] DEAL OF THE DAY ───────────────────────────
-                            if (controller.featuredProducts.isNotEmpty)
-                              _DealOfTheDaySection(
-                                product: controller.featuredProducts.first,
-                                onTap: () => controller.onProductTap(
-                                  controller.featuredProducts.first['id']
-                                          ?.toString() ??
-                                      '',
+                                const SizedBox(height: 22),
+                                // --- [6] RECENT VIEWED PRODUCTS START/END ------------
+                                _ProductsStripSection(
+                                  title: 'Recent Viewed Products',
+                                  backgroundColor: const Color(0xFFF5F3FF),
+                                  actionLabel: 'See All',
+                                  onViewAllTap: () => Get.toNamed('/home'),
+                                  products: controller.recentViewedProducts,
+                                  onProductTap: (id) =>
+                                      controller.onProductTap(id),
+                                  onWishlistToggleById: (id) {
+                                    final idx = controller.featuredProducts
+                                        .indexWhere((item) =>
+                                            item['id'].toString() == id);
+                                    if (idx >= 0) {
+                                      controller.toggleWishlist(idx);
+                                    }
+                                  },
                                 ),
-                              ),
-                            const SizedBox(height: 22),
-                            // ─── [6] RECENT VIEWED PRODUCTS START/END ────────────
-                            _ProductsStripSection(
-                              title: 'Recent Viewed Products',
-                              backgroundColor: const Color(0xFFF5F3FF),
-                              actionLabel: 'See All',
-                              onViewAllTap: () => Get.toNamed('/products'),
-                              products: controller.recentViewedProducts,
-                              onProductTap: (id) => controller.onProductTap(id),
-                              onWishlistToggleById: (id) {
-                                final idx = controller.featuredProducts
-                                    .indexWhere(
-                                        (item) => item['id'].toString() == id);
-                                if (idx >= 0) {
-                                  controller.toggleWishlist(idx);
-                                }
-                              },
+                                const SizedBox(height: 22),
+                                // --- [7] TOP RATED PRODUCTS START/END ----------------
+                                _ProductsStripSection(
+                                  title: 'Top Rated Products',
+                                  backgroundColor: const Color(0xFFEFF7FF),
+                                  actionLabel: 'View All',
+                                  onViewAllTap: () => Get.toNamed('/home'),
+                                  products: controller.topRatedProducts,
+                                  onProductTap: (id) =>
+                                      controller.onProductTap(id),
+                                  onWishlistToggleById: (id) {
+                                    final idx = controller.featuredProducts
+                                        .indexWhere((item) =>
+                                            item['id'].toString() == id);
+                                    if (idx >= 0) {
+                                      controller.toggleWishlist(idx);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 22),
+                                // --- [NEW] TOP BRANDS --------------------------------
+                                const _BrandRowSection(),
+                                const SizedBox(height: 22),
+                                // --- [8] HOT OFFERS START/END ------------------------
+                                _OffersSection(
+                                    offers: controller.offers.toList()),
+                                const SizedBox(height: 22),
+                                // --- [9] SHOPPING BENEFITS START/END -----------------
+                                const _HomeBenefitsSection(),
+                                const SizedBox(height: 20),
+                              ],
                             ),
-                            const SizedBox(height: 22),
-                            // ─── [7] TOP RATED PRODUCTS START/END ────────────────
-                            _ProductsStripSection(
-                              title: 'Top Rated Products',
-                              backgroundColor: const Color(0xFFEFF7FF),
-                              actionLabel: 'View All',
-                              onViewAllTap: () => Get.toNamed('/products'),
-                              products: controller.topRatedProducts,
-                              onProductTap: (id) => controller.onProductTap(id),
-                              onWishlistToggleById: (id) {
-                                final idx = controller.featuredProducts
-                                    .indexWhere(
-                                        (item) => item['id'].toString() == id);
-                                if (idx >= 0) {
-                                  controller.toggleWishlist(idx);
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 22),
-                            // ─── [NEW] TOP BRANDS ────────────────────────────────
-                            const _BrandRowSection(),
-                            const SizedBox(height: 22),
-                            // ─── [8] HOT OFFERS START/END ────────────────────────
-                            _OffersSection(offers: controller.offers.toList()),
-                            const SizedBox(height: 22),
-                            // ─── [9] SHOPPING BENEFITS START/END ─────────────────
-                            const _HomeBenefitsSection(),
-                            const SizedBox(height: 20),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF2D3A45),
-                        Color(0xFF9CA9B4),
-                        Color(0xFFFAF7F7),
+              if (!isWeb)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Obx(
+                    () => PremiumBottomBar(
+                      selectedIndex: 0,
+                      onTap: (index) {
+                        switch (index) {
+                          case 0:
+                            break;
+                          case 1:
+                            Get.toNamed('/cart');
+                            break;
+                          case 2:
+                            Get.toNamed('/profile');
+                            break;
+                        }
+                      },
+                      items: [
+                        BottomBarItem(
+                          icon: Icons.home_filled,
+                          label: 'Home',
+                        ),
+                        BottomBarItem(
+                          icon: Icons.shopping_cart,
+                          label: 'Cart',
+                          badgeCount: cartController.itemCount,
+                        ),
+                        BottomBarItem(
+                          icon: Icons.person,
+                          label: 'Profile',
+                        ),
                       ],
                     ),
                   ),
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Builder(
-                            builder: (context) => GestureDetector(
-                              onTap: () => Scaffold.of(context).openDrawer(),
-                              child: Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.white,
-                                  border: Border.all(
-                                    color: const Color(0xFFEFEFEF),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.black.withOpacity(0.07),
-                                      blurRadius: 18,
-                                      offset: const Offset(0, 7),
-                                    ),
-                                  ],
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Image.network(
-                                  hasBanners
-                                      ? (banners.first['image'] ?? '')
-                                          .toString()
-                                      : '',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const Icon(Icons.person, size: 20),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _greeting(),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Color(0xFFE3EBF1),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                const Text(
-                                  'Devon Lane',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    color: AppColors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _HeaderActionButton(
-                            icon: Icons.notifications_none_rounded,
-                            badgeCount: 2,
-                            onTap: () => Get.toNamed('/notifications'),
-                          ),
-                          Obx(() => _HeaderActionButton(
-                                icon: Icons.shopping_bag_outlined,
-                                badgeCount: cartController.itemCount,
-                                onTap: () => Get.toNamed('/cart'),
-                              )),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        height: 52,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFF4B5964),
-                              Color(0xFFEEF2F5),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(26),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.black.withOpacity(0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 7),
-                            ),
-                          ],
-                        ),
-                        child: Obx(() => CommonInputField.field(
-                              onTap: () => Get.toNamed('/search'),
-                              onChanged: (value) =>
-                                  controller.searchQuery.value = value,
-                              hintText: controller.currentSearchHint,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 15),
-                              prefixIconConstraints: const BoxConstraints(
-                                  minWidth: 50, minHeight: 44),
-                              suffixIconConstraints: const BoxConstraints(
-                                  minWidth: 50, minHeight: 44),
-                              prefixWidget: const Icon(
-                                Icons.search_rounded,
-                                color: Color(0xFF8A8A8A),
-                                size: 22,
-                              ),
-                              suffixWidget: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Color(0xFF0F6B43),
-                                ),
-                                child: const Icon(
-                                  Icons.tune_rounded,
-                                  size: 17,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                              fillColor: AppColors.white,
-                              radius: 26,
-                              showFocusedBorder: false,
-                            )),
-                      ),
-                      // Obx(
-                      //   () => controller.showEmergencyBanner.value
-                      //       ? _EmergencyBanner(
-                      //           message: controller.emergencyMessage.value,
-                      //           onClose: () => controller
-                      //               .showEmergencyBanner.value = false,
-                      //         )
-                      //       : const SizedBox.shrink(),
-                      // ),
-                    ],
-                  ),
                 ),
-              ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Obx(
-                  () => PremiumBottomBar(
-                    selectedIndex: 0,
-                    onTap: (index) {
-                      switch (index) {
-                        case 0:
-                          break;
-                        case 1:
-                          Get.toNamed('/cart');
-                          break;
-                        case 2:
-                          Get.toNamed('/profile');
-                          break;
-                      }
-                    },
-                    items: [
-                      BottomBarItem(
-                        icon: Icons.home_filled,
-                        label: 'Home',
-                      ),
-                      BottomBarItem(
-                        icon: Icons.shopping_cart,
-                        label: 'Cart',
-                        badgeCount: cartController.itemCount,
-                      ),
-                      BottomBarItem(
-                        icon: Icons.person,
-                        label: 'Profile',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -732,118 +740,193 @@ class HomeView extends GetView<HomeController> {
   }
 }
 
-class _EmergencyBanner extends StatelessWidget {
-  final String message;
-  final VoidCallback onClose;
-  const _EmergencyBanner({required this.message, required this.onClose});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 248, 237, 185).withOpacity(0.18),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color.fromARGB(255, 248, 234, 171).withOpacity(0.55),
-        ),
+Future<void> _showHomeInfoSheet(
+  BuildContext context, {
+  required String title,
+  required String message,
+  bool isUrgent = false,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.75,
       ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: Color.fromARGB(255, 248, 173, 10),
-            size: 15,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Color.fromARGB(255, 241, 177, 0),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                height: 1.3,
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 40,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.white2,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      tooltip: 'Close information',
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      constraints:
+                          const BoxConstraints.tightFor(width: 40, height: 40),
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          GestureDetector(
-            onTap: onClose,
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(
-                Icons.close_rounded,
-                color: Color.fromARGB(255, 71, 71, 71),
-                size: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderActionButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final int badgeCount;
-
-  const _HeaderActionButton({
-    required this.icon,
-    required this.onTap,
-    this.badgeCount = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            margin: const EdgeInsets.only(left: 8),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.07),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isUrgent
+                        ? AppColors.warning.withOpacity(0.12)
+                        : AppColors.primary1.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    isUrgent
+                        ? Icons.warning_amber_rounded
+                        : Icons.info_outline_rounded,
+                    color: isUrgent ? AppColors.warning : AppColors.primary1,
+                  ),
                 ),
-              ],
-            ),
-            child: Icon(icon, color: const Color(0xFF2D3A45), size: 20),
-          ),
-          if (badgeCount > 0)
-            Positioned(
-              top: -2,
-              right: -2,
-              child: Container(
-                width: 17,
-                height: 17,
-                decoration: const BoxDecoration(
-                  color: AppColors.error,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
+                const SizedBox(width: 12),
+                Expanded(
                   child: Text(
-                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    title,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
+                      color: AppColors.black1,
+                      fontSize: 19,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'resources/images/login_img.png',
+                width: double.infinity,
+                height: 128,
+                fit: BoxFit.contain,
               ),
             ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.black2,
+                fontSize: 15,
+                height: 1.55,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(sheetContext).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary1,
+                  foregroundColor: AppColors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Got it'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _EmergencyBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onTap;
+  final VoidCallback onClose;
+  const _EmergencyBanner({
+    required this.message,
+    required this.onTap,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 248, 237, 185).withOpacity(0.18),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: const Color.fromARGB(255, 248, 234, 171).withOpacity(0.55),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Color.fromARGB(255, 248, 173, 10),
+                size: 15,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Color.fromARGB(255, 241, 177, 0),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onClose,
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.close_rounded,
+                    color: Color.fromARGB(255, 71, 71, 71),
+                    size: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -876,11 +959,7 @@ class _ProductsStripSection extends StatelessWidget {
         : width >= 900
             ? 205.0
             : 178.0;
-    final listHeight = width >= 1200
-        ? 320.0
-        : width >= 900
-            ? 300.0
-            : 286.0;
+    final listHeight = width < 600 ? 430.0 : 420.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,8 +1003,14 @@ class _ProductsStripSection extends StatelessWidget {
                         originalPrice: originalPrice,
                         rating: rating,
                         reviewCount: reviewCount,
+                        cardHeight: 400,
                         isWishlisted: product['isWishlisted'] == true,
+                        isSponsored: product['isSponsored'] == true,
+                        lowestPrice30Days:
+                            (product['lowestPrice30Days'] as num?)?.toDouble(),
                         onTap: () => onProductTap(id),
+                        onAddToCart: () => CartController.ensureInitialized()
+                            .addMapProductToCart(product),
                         onWishlistToggle: () => onWishlistToggleById(id),
                       ),
                     );
@@ -956,7 +1041,7 @@ class _HomeBenefitsSection extends StatelessWidget {
               _SectionHeader(
                 title: 'Shopping Benefits',
                 actionLabel: 'See All',
-                onActionTap: () => Get.toNamed('/products'),
+                onActionTap: () => Get.toNamed('/home'),
               ),
               const SizedBox(height: 12),
               const Row(
@@ -1027,12 +1112,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: AppTextStyle.fs12Black600(),
+          style: AppTextStyle.fs12Black600().copyWith(
+            fontSize: isMobile ? 18 : 16,
+          ),
         ),
         TextButton(
           onPressed: onActionTap,
@@ -1045,6 +1133,7 @@ class _SectionHeader extends StatelessWidget {
             actionLabel,
             style: AppTextStyle.cardTitleStyle().copyWith(
               color: AppColors.primary2,
+              fontSize: isMobile ? 14 : 13,
             ),
           ),
         ),
@@ -1073,8 +1162,7 @@ class _OffersSection extends StatelessWidget {
           ...offers.map(
             (offer) => _OfferCard(
               offer: offer,
-              onTap: () =>
-                  Get.toNamed(offer['route']?.toString() ?? '/products'),
+              onTap: () => Get.toNamed(offer['route']?.toString() ?? '/home'),
             ),
           ),
         ],
@@ -1453,8 +1541,7 @@ class _PromoOffersSectionState extends State<_PromoOffersSection>
                                       const SizedBox(height: 8),
                                       GestureDetector(
                                         onTap: () => Get.toNamed(
-                                          promo['route']?.toString() ??
-                                              '/products',
+                                          promo['route']?.toString() ?? '/home',
                                         ),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
@@ -1467,7 +1554,7 @@ class _PromoOffersSectionState extends State<_PromoOffersSection>
                                                 BorderRadius.circular(20),
                                           ),
                                           child: Text(
-                                            'Shop Now →',
+                                            'Shop Now ?',
                                             style: TextStyle(
                                               color: colors[0],
                                               fontSize: 10,
@@ -1566,7 +1653,7 @@ class _PromoOffersSectionState extends State<_PromoOffersSection>
   }
 }
 
-// ─── Flash Sale Section ───────────────────────────────────────
+// --- Flash Sale Section ---------------------------------------
 class _FlashSaleSection extends StatefulWidget {
   final List<Map<String, dynamic>> products;
   final ValueChanged<String> onProductTap;
@@ -1606,16 +1693,13 @@ class _FlashSaleSectionState extends State<_FlashSaleSection> {
     final m = _pad((_secondsLeft % 3600) ~/ 60);
     final s = _pad(_secondsLeft % 60);
     final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
     final cardWidth = width >= 1200
         ? 230.0
         : width >= 900
             ? 205.0
             : 178.0;
-    final listHeight = width >= 1200
-        ? 320.0
-        : width >= 900
-            ? 300.0
-            : 286.0;
+    final listHeight = isMobile ? 430.0 : 420.0;
 
     return _SectionContainer(
       backgroundColor: const Color(0xFFFFF3F0),
@@ -1635,7 +1719,7 @@ class _FlashSaleSectionState extends State<_FlashSaleSection> {
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.bolt_rounded, color: Colors.white, size: 14),
@@ -1644,7 +1728,7 @@ class _FlashSaleSectionState extends State<_FlashSaleSection> {
                       'Flash Sale',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: isMobile ? 15 : 12,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1674,7 +1758,7 @@ class _FlashSaleSectionState extends State<_FlashSaleSection> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => Get.toNamed('/products'),
+                onPressed: () => Get.toNamed('/home'),
                 style: TextButton.styleFrom(
                   minimumSize: Size.zero,
                   padding: const EdgeInsets.symmetric(
@@ -1687,6 +1771,7 @@ class _FlashSaleSectionState extends State<_FlashSaleSection> {
                   'View All',
                   style: AppTextStyle.cardTitleStyle().copyWith(
                     color: AppColors.primary2,
+                    fontSize: isMobile ? 14 : 13,
                   ),
                 ),
               ),
@@ -1714,8 +1799,14 @@ class _FlashSaleSectionState extends State<_FlashSaleSection> {
                     rating: ((product['rating'] as num?) ?? 0).toDouble(),
                     reviewCount:
                         ((product['reviewCount'] as num?) ?? 0).toInt(),
+                    cardHeight: 400,
                     isWishlisted: product['isWishlisted'] == true,
+                    isSponsored: product['isSponsored'] == true,
+                    lowestPrice30Days:
+                        (product['lowestPrice30Days'] as num?)?.toDouble(),
                     onTap: () => widget.onProductTap(id),
+                    onAddToCart: () => CartController.ensureInitialized()
+                        .addMapProductToCart(product),
                     onWishlistToggle: () {},
                   ),
                 );
@@ -1771,7 +1862,7 @@ class _TimerColon extends StatelessWidget {
   }
 }
 
-// ─── Deal of the Day Section ──────────────────────────────────
+// --- Deal of the Day Section ----------------------------------
 class _DealOfTheDaySection extends StatefulWidget {
   final Map<String, dynamic> product;
   final VoidCallback onTap;
@@ -1813,13 +1904,16 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
     final m = _pad(_remaining.inMinutes.remainder(60));
     final s = _pad(_remaining.inSeconds.remainder(60));
     final name = (widget.product['name'] ?? 'Premium Product').toString();
-    final image = (widget.product['image'] ?? '').toString();
     final price = ((widget.product['price'] as num?) ?? 0).toDouble();
     final originalPrice =
         ((widget.product['originalPrice'] as num?) ?? 0).toDouble();
     final discount = originalPrice > price && originalPrice > 0
         ? ((originalPrice - price) / originalPrice * 100).round()
         : 0;
+    final rating = ((widget.product['rating'] as num?) ?? 0).toDouble();
+    final reviewCount = ((widget.product['reviewCount'] as num?) ?? 0).toInt();
+    final lowestPrice30Days =
+        (widget.product['lowestPrice30Days'] as num?)?.toDouble();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1877,7 +1971,7 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Text(
-                            '🔥 Deal of the Day',
+                            '?? Deal of the Day',
                             style: TextStyle(
                               color: Color(0xFF1A1A2E),
                               fontSize: 11,
@@ -1885,6 +1979,27 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
                             ),
                           ),
                         ),
+                        if (widget.product['isSponsored'] == true) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.94),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: const Text(
+                              'Sponsored',
+                              style: TextStyle(
+                                color: AppColors.black1,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                         const Spacer(),
                         const Icon(
                           Icons.timer_outlined,
@@ -1908,8 +2023,8 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: Image.network(
-                            image,
+                          child: Image.asset(
+                            productCardImageForTesting,
                             width: 90,
                             height: 90,
                             fit: BoxFit.cover,
@@ -1944,11 +2059,47 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
                                   height: 1.3,
                                 ),
                               ),
+                              const SizedBox(height: 7),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 14,
+                                    color: Color(0xFFFFD700),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    rating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    ' ($reviewCount)',
+                                    style: const TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (discount > 0)
+                                    Text(
+                                      '$discount% OFF',
+                                      style: const TextStyle(
+                                        color: Color(0xFFFFB38A),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                ],
+                              ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Text(
-                                    '₹${price.toStringAsFixed(0)}',
+                                    '?${price.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       color: Color(0xFFFFD700),
                                       fontSize: 20,
@@ -1958,7 +2109,7 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
                                   if (originalPrice > price) ...[
                                     const SizedBox(width: 8),
                                     Text(
-                                      '₹${originalPrice.toStringAsFixed(0)}',
+                                      '?${originalPrice.toStringAsFixed(0)}',
                                       style: const TextStyle(
                                         color: Colors.white38,
                                         fontSize: 13,
@@ -1968,57 +2119,23 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
                                   ],
                                 ],
                               ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  if (discount > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF4500)
-                                            .withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: const Color(0xFFFF4500),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '$discount% OFF',
-                                        style: const TextStyle(
-                                          color: Color(0xFFFF6B35),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  const Spacer(),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF0F6B43),
-                                          Color(0xFF37C87A),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: const Text(
-                                      'Grab Now',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                              if (lowestPrice30Days != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '30-day low ?${lowestPrice30Days.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ],
+                                ),
+                              ],
+                              const SizedBox(height: 10),
+                              ProductAddToCartButton(
+                                compact: true,
+                                onPressed: () =>
+                                    CartController.ensureInitialized()
+                                        .addMapProductToCart(widget.product),
                               ),
                             ],
                           ),
@@ -2069,7 +2186,7 @@ class _DealOfTheDaySectionState extends State<_DealOfTheDaySection> {
   }
 }
 
-// ─── Top Brands Section ───────────────────────────────────────
+// --- Top Brands Section ---------------------------------------
 class _BrandRowSection extends StatelessWidget {
   const _BrandRowSection();
 
@@ -2093,7 +2210,7 @@ class _BrandRowSection extends StatelessWidget {
           _SectionHeader(
             title: 'Top Brands',
             actionLabel: 'All Brands',
-            onActionTap: () => Get.toNamed('/products'),
+            onActionTap: () => Get.toNamed('/home'),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -2108,7 +2225,7 @@ class _BrandRowSection extends StatelessWidget {
                 final name = brand['name'] as String;
                 final initial = brand['initial'] as String;
                 return GestureDetector(
-                  onTap: () => Get.toNamed('/products'),
+                  onTap: () => Get.toNamed('/home'),
                   child: Container(
                     width: 70,
                     decoration: BoxDecoration(
@@ -2190,7 +2307,7 @@ class _BenefitTile extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF0F6B43)),
+          Icon(icon, size: 18, color: AppColors.primary1),
           const SizedBox(height: 6),
           Text(
             title,
@@ -2212,102 +2329,6 @@ class _BenefitTile extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Helpers for new sections ──────────────────────────────────────────────────
-
-String _greeting() {
-  final h = DateTime.now().hour;
-  if (h < 12) return 'Good Morning 🌅';
-  if (h < 17) return 'Good Afternoon ☀️';
-  return 'Good Evening 🌙';
-}
-
-Widget _proofDivider() => Container(
-      width: 1,
-      height: 28,
-      color: AppColors.primary1.withOpacity(0.15),
-    );
-
-class _ProofItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sub;
-
-  const _ProofItem(
-      {required this.icon, required this.label, required this.sub});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: AppColors.primary1),
-            const SizedBox(width: 4),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black1)),
-          ],
-        ),
-        Text(sub,
-            style: const TextStyle(
-                fontSize: 9,
-                color: AppColors.muteIconColor,
-                fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-}
-
-class _QuickChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String route;
-
-  const _QuickChip(this.icon, this.label, this.route);
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Get.toNamed(route),
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.white2),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: AppColors.primary1),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.black1,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

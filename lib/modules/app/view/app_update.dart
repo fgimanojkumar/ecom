@@ -1,9 +1,9 @@
-import 'package:imoss/shared/style/app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/style/app_style.dart';
 import '../../../shared/utils/responsive_util.dart';
+import '../../../shared/widgets/app_update_dialog.dart';
 
 class AppUpdate extends StatelessWidget {
   const AppUpdate({super.key});
@@ -32,7 +32,7 @@ class AppUpdate extends StatelessWidget {
               ),
               const SizedBox(height: 20.0),
               SizedBox(
-                width: 200,
+                width: 220,
                 child: CupertinoButton(
                   padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
                   onPressed: () {
@@ -48,6 +48,32 @@ class AppUpdate extends StatelessWidget {
                   color: AppColors.primary1,
                   child: const Text('UPDATE NOW'),
                 ),
+              ),
+              const SizedBox(height: 16.0),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () =>
+                        AppUpdateDialog.showTestDialog(force: false),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary1,
+                      foregroundColor: AppColors.white,
+                    ),
+                    child: const Text('Test Update'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () =>
+                        AppUpdateDialog.showTestDialog(force: true),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary1),
+                      foregroundColor: AppColors.primary1,
+                    ),
+                    child: const Text('Test Force Update'),
+                  ),
+                ],
               )
             ],
           ),

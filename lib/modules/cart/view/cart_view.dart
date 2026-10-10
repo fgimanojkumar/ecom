@@ -1,17 +1,36 @@
 ﻿import 'package:imoss/shared/style/app_colors.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../shared/utils/responsive_util.dart';
+import '../../../shared/widgets/common_input_field.dart';
 import '../../../shared/widgets/premium_app_bar.dart';
 import '../../coupon/controller/coupon_controller.dart';
+import '../../wishlist/controller/wishlist_controller.dart';
 import '../controller/cart_controller.dart';
 
-class CartView extends GetView<CartController> {
+class CartView extends StatefulWidget {
   const CartView({super.key});
 
   @override
+  State<CartView> createState() => _CartViewState();
+}
+
+class _CartViewState extends State<CartView> {
+  final CartController controller = CartController.ensureInitialized();
+  final TextEditingController _couponInputController = TextEditingController();
+
+  @override
+  void dispose() {
+    _couponInputController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isWideWeb = kIsWeb && MediaQuery.sizeOf(context).width >= 1024;
+
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: PremiumAppBar(
@@ -45,6 +64,53 @@ class CartView extends GetView<CartController> {
           if (controller.cartItems.isEmpty) {
             return _buildEmptyCart();
           }
+          if (isWideWeb) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Text(
+                          'Items (${controller.itemCount})',
+                          style: const TextStyle(
+                            color: AppColors.black1,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+                          child: _buildCartItems(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  flex: 4,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(8, 16, 16, 24),
+                    child: Column(
+                      children: [
+                        _buildCouponRow(),
+                        const SizedBox(height: 14),
+                        _buildOrderSummary(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
           return Column(
             children: [
               Expanded(
@@ -52,61 +118,11 @@ class CartView extends GetView<CartController> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   child: Column(
                     children: [
-                      // ── Cart Items ─────────────────────────────────────
-                      ...List.generate(controller.cartItems.length, (index) {
-                        final item = controller.cartItems[index];
-                        return Dismissible(
-                          key: Key(item.id),
-                          direction: DismissDirection.endToStart,
-                          onDismissed: (_) =>
-                              controller.removeFromCart(item.id),
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            margin: const EdgeInsets.only(bottom: 14),
-                            padding: const EdgeInsets.only(right: 24),
-                            decoration: BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.delete_rounded,
-                                    color: Colors.white, size: 26),
-                                SizedBox(height: 4),
-                                Text('Remove',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          ),
-                          child: _CartItemCard(
-                            item: item,
-                            onRemove: () => controller.removeFromCart(item.id),
-                            onDecrement: () {
-                              if (item.quantity > 1) {
-                                controller.updateQuantity(
-                                    item.id, item.quantity - 1);
-                              }
-                            },
-                            onIncrement: () => controller.updateQuantity(
-                                item.id, item.quantity + 1),
-                          ),
-                        );
-                      }),
-
+                      _buildCartItems(),
                       const SizedBox(height: 14),
-
-                      // â”€â”€ Apply Coupon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                       _buildCouponRow(),
-
                       const SizedBox(height: 14),
-
-                      // â”€â”€ Order Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                       _buildOrderSummary(),
-
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -119,6 +135,54 @@ class CartView extends GetView<CartController> {
       bottomNavigationBar: Obx(() => controller.cartItems.isEmpty
           ? const SizedBox()
           : _buildCheckoutBar(context)),
+    );
+  }
+
+  Widget _buildCartItems() {
+    return Column(
+      children: List.generate(controller.cartItems.length, (index) {
+        final item = controller.cartItems[index];
+        return Dismissible(
+          key: Key(item.id),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) => controller.removeFromCart(item.id),
+          background: Container(
+            alignment: Alignment.centerRight,
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.only(right: 24),
+            decoration: BoxDecoration(
+              color: AppColors.error,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.delete_rounded, color: Colors.white, size: 26),
+                SizedBox(height: 4),
+                Text(
+                  'Remove',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child: _CartItemCard(
+            item: item,
+            onRemove: () => controller.removeFromCart(item.id),
+            onDecrement: () {
+              if (item.quantity > 1) {
+                controller.updateQuantity(item.id, item.quantity - 1);
+              }
+            },
+            onIncrement: () =>
+                controller.updateQuantity(item.id, item.quantity + 1),
+          ),
+        );
+      }),
     );
   }
 
@@ -201,25 +265,37 @@ class CartView extends GetView<CartController> {
   // â”€â”€â”€ Coupon Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildCouponRow() {
-    return Builder(builder: (_) {
-      final hasApplied = Get.isRegistered<CouponController>() &&
-          Get.find<CouponController>().appliedCouponCode.value.isNotEmpty;
-      return GestureDetector(
-        onTap: () => Get.toNamed('/coupons'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    final couponController = CouponController.ensureInitialized();
+    final hasApplied = couponController.appliedCouponCode.value.isNotEmpty;
+    final couponCode = couponController.appliedCouponCode.value;
+
+    if (hasApplied && _couponInputController.text != couponCode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _couponInputController.value = TextEditingValue(
+          text: couponCode,
+          selection: TextSelection.collapsed(offset: couponCode.length),
+        );
+      });
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -233,26 +309,92 @@ class CartView extends GetView<CartController> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  hasApplied ? 'Coupon Applied!' : 'Apply Coupon',
+                  hasApplied ? 'Coupon Applied' : 'Apply Coupon',
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                     color: hasApplied ? AppColors.success : AppColors.black1,
                   ),
                 ),
               ),
-              Icon(
-                hasApplied
-                    ? Icons.check_circle_rounded
-                    : Icons.chevron_right_rounded,
-                color: hasApplied ? AppColors.success : AppColors.muteIconColor,
-                size: 20,
+              if (hasApplied)
+                TextButton(
+                  onPressed: () {
+                    couponController.removeCoupon();
+                    _couponInputController.clear();
+                  },
+                  child: const Text(
+                    'Remove',
+                    style: TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (hasApplied) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 42),
+              child: Text(
+                '${couponController.detailsFor(couponCode)?['description'] ?? couponCode} · ${couponController.detailsFor(couponCode)?['unlock'] ?? 'Discount applied to your order'}',
+                style: const TextStyle(
+                  color: AppColors.black2,
+                  fontSize: 12,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: CommonInputField.field(
+                  controller: _couponInputController,
+                  hintText: 'Enter coupon code',
+                  fillColor: AppColors.white1,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: () {
+                  final code = _couponInputController.text.trim();
+                  if (code.isEmpty) {
+                    Get.snackbar('Coupon', 'Enter a coupon code first');
+                    return;
+                  }
+                  couponController.applyCoupon(
+                    code,
+                    cartSubtotal: controller.subtotal,
+                    cartCategories: controller.cartItems
+                        .map((item) => item.product.category)
+                        .toSet(),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary1,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Apply'),
               ),
             ],
           ),
-        ),
-      );
-    });
+        ],
+      ),
+    );
   }
 
   // â”€â”€â”€ Order Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -308,10 +450,8 @@ class CartView extends GetView<CartController> {
             child: Column(
               children: [
                 _summaryRow(
-                    'Sub Total', '\$${controller.subtotal.toStringAsFixed(2)}'),
+                    'Sub Total', '₹${controller.subtotal.toStringAsFixed(2)}'),
                 const SizedBox(height: 10),
-
-                // Coupon row (Builder is synchronous inside outer Obx â†’ still tracked)
                 Builder(builder: (_) {
                   if (!Get.isRegistered<CouponController>()) {
                     return const SizedBox.shrink();
@@ -338,7 +478,7 @@ class CartView extends GetView<CartController> {
                           ],
                         ),
                         Text(
-                          '-\$${discount.toStringAsFixed(2)}',
+                          '-₹${discount.toStringAsFixed(2)}',
                           style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -348,14 +488,31 @@ class CartView extends GetView<CartController> {
                     ),
                   );
                 }),
-
-                _summaryRow('Shipping', '\$8.00'),
+                Builder(builder: (_) {
+                  final savings = controller.totalSavings;
+                  if (savings <= 0) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _summaryRow(
+                      'Total Savings',
+                      '₹${savings.toStringAsFixed(2)}',
+                      accent: true,
+                    ),
+                  );
+                }),
+                _summaryRow(
+                  'Tax (${(CartController.taxRate * 100).toStringAsFixed(0)}%)',
+                  '₹${controller.tax.toStringAsFixed(2)}',
+                ),
+                const SizedBox(height: 10),
+                _summaryRow(
+                  'Shipping',
+                  '₹${CartController.shippingCharge.toStringAsFixed(2)}',
+                ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 14),
                   child: Divider(height: 1),
                 ),
-
-                // Total row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -365,7 +522,7 @@ class CartView extends GetView<CartController> {
                             fontWeight: FontWeight.w700,
                             color: AppColors.black1)),
                     Text(
-                      '\$${(controller.subtotal - controller.couponDiscount + 8).toStringAsFixed(2)}',
+                      '₹${controller.total.toStringAsFixed(2)}',
                       style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -381,17 +538,22 @@ class CartView extends GetView<CartController> {
     );
   }
 
-  Widget _summaryRow(String label, String value) {
+  Widget _summaryRow(String label, String value, {bool accent = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, color: AppColors.black2)),
+            style: TextStyle(
+              fontSize: 13,
+              color: accent ? AppColors.success : AppColors.black2,
+              fontWeight: accent ? FontWeight.w700 : FontWeight.w400,
+            )),
         Text(value,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.black1)),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: accent ? AppColors.success : AppColors.black1,
+            )),
       ],
     );
   }
@@ -426,7 +588,7 @@ class CartView extends GetView<CartController> {
                       fontWeight: FontWeight.w500)),
               const SizedBox(height: 2),
               Text(
-                '\$${(controller.subtotal - controller.couponDiscount + 8).toStringAsFixed(2)}',
+                '₹${controller.total.toStringAsFixed(2)}',
                 style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -502,6 +664,19 @@ class _CartItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasDiscount = item.product.originalPrice > item.product.price;
+    final image = item.product.image as String;
+    final wishlist = WishlistController.ensureInitialized();
+    final wishlistProduct = <String, dynamic>{
+      'id': item.product.id,
+      'name': item.product.name,
+      'image': image,
+      'price': item.product.price,
+      'originalPrice': item.product.originalPrice,
+      'rating': item.product.rating,
+      'reviewCount': item.product.reviewCount,
+      'category': item.product.category,
+      'stock': item.product.stock,
+    };
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -529,22 +704,41 @@ class _CartItemCard extends StatelessWidget {
             // â”€â”€ Product Image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                item.product.image,
-                width: 96,
-                height: 96,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: AppColors.white1,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.image_outlined,
-                      color: AppColors.muteIconColor, size: 28),
-                ),
-              ),
+              child: image.startsWith('http')
+                  ? Image.network(
+                      image,
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _cartImageFallback(),
+                    )
+                  : image.startsWith('resources/')
+                      ? Image.asset(
+                          image,
+                          width: 96,
+                          height: 96,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _cartImageFallback(),
+                        )
+                      : Container(
+                          width: 96,
+                          height: 96,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF8EE),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: image.isEmpty
+                              ? const Icon(
+                                  Icons.image_outlined,
+                                  color: AppColors.muteIconColor,
+                                  size: 28,
+                                )
+                              : Text(
+                                  image,
+                                  style: const TextStyle(fontSize: 38),
+                                ),
+                        ),
             ),
 
             const SizedBox(width: 14),
@@ -612,7 +806,7 @@ class _CartItemCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '\$${item.product.price.toStringAsFixed(2)}',
+                        '₹${item.product.price.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -622,7 +816,7 @@ class _CartItemCard extends StatelessWidget {
                       if (hasDiscount) ...[
                         const SizedBox(width: 8),
                         Text(
-                          '\$${item.product.originalPrice.toStringAsFixed(2)}',
+                          '₹${item.product.originalPrice.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.muteIconColor,
@@ -640,22 +834,32 @@ class _CartItemCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Wishlist
-                      GestureDetector(
-                        onTap: () {},
-                        child: Row(
-                          children: [
-                            Icon(Icons.favorite_border_rounded,
+                      Obx(() {
+                        final isSaved = wishlist.isWishlisted(item.product.id);
+                        return GestureDetector(
+                          onTap: () => wishlist.toggleProduct(wishlistProduct),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSaved
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
                                 size: 14,
-                                color: AppColors.error.withOpacity(0.7)),
-                            const SizedBox(width: 4),
-                            Text('Wishlist',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.black2,
-                                    fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ),
+                                color: AppColors.error.withOpacity(0.7),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isSaved ? 'Saved' : 'Wishlist',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.black2,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
 
                       // Quantity stepper
                       Container(
@@ -707,6 +911,22 @@ class _CartItemCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _cartImageFallback() {
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: BoxDecoration(
+        color: AppColors.white1,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Icon(
+        Icons.image_outlined,
+        color: AppColors.muteIconColor,
+        size: 28,
       ),
     );
   }

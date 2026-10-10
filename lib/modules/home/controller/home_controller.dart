@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../cart/controller/cart_controller.dart';
+import '../../../shared/style/app_colors.dart';
 import '../../../shared/widgets/app_toast.dart';
 
 class HomeController extends GetxController {
@@ -153,10 +154,11 @@ class HomeController extends GetxController {
   final featuredProducts = <Map<String, dynamic>>[
     {
       'id': '1',
-      'name':
-          'Premium Wireless Headphones Premium Wireless Headphones Premium Wireless Headphones Premium Wireless Headphones',
+      'name': 'Premium Wireless Headphones',
       'price': 3999,
       'originalPrice': 5999,
+      'isSponsored': true,
+      'lowestPrice30Days': 3799,
       'rating': 4.5,
       'reviewCount': 128,
       'image':
@@ -166,9 +168,10 @@ class HomeController extends GetxController {
     },
     {
       'id': '2',
-      'name': 'Smart Watch Ultra',
+      'name': 'Everyday Smart Watch',
       'price': 8999,
       'originalPrice': 12999,
+      'lowestPrice30Days': 8499,
       'rating': 4.8,
       'reviewCount': 245,
       'image':
@@ -178,9 +181,10 @@ class HomeController extends GetxController {
     },
     {
       'id': '3',
-      'name': 'Designer T-Shirt',
+      'name': 'Classic Canvas Sneakers',
       'price': 799,
       'originalPrice': 1299,
+      'lowestPrice30Days': 699,
       'rating': 4.3,
       'reviewCount': 89,
       'image':
@@ -190,7 +194,8 @@ class HomeController extends GetxController {
     },
     {
       'id': '4',
-      'name': 'Organic Face Cream',
+      'name':
+          'Dhyan rahe variable ka naam age hai, lekin value DOB jaisi lag rahi hai. Agar age me actual age (e.g., 35) stored hai aur dob me date hai, to condition hamesha true aa sakti hai.',
       'price': 599,
       'originalPrice': 899,
       'rating': 4.6,
@@ -259,7 +264,7 @@ class HomeController extends GetxController {
       'code': 'DIWALI70',
       'icon': Icons.local_fire_department_rounded,
       'colors': [const Color(0xFFFF6B35), const Color(0xFFE8395A)],
-      'route': '/products',
+      'route': '/home',
     },
     {
       'title': 'Festival Cashback',
@@ -276,8 +281,8 @@ class HomeController extends GetxController {
       'discount': 'B2G1',
       'code': 'FLASH21',
       'icon': Icons.bolt_rounded,
-      'colors': [const Color(0xFF0B6B43), const Color(0xFF37C87A)],
-      'route': '/products',
+      'colors': [AppColors.gradientStart, AppColors.gradientEnd],
+      'route': '/home',
     },
   ].obs;
 
@@ -290,7 +295,7 @@ class HomeController extends GetxController {
       'tag': 'TODAY ONLY',
       'gradient': [const Color(0xFFFF6B6B), const Color(0xFFFF8E53)],
       'accent': const Color(0xFFFFD93D),
-      'route': '/products',
+      'route': '/home',
     },
     {
       'title': 'Electronics Fest',
@@ -299,16 +304,16 @@ class HomeController extends GetxController {
       'tag': 'LIMITED',
       'gradient': [const Color(0xFF4776E6), const Color(0xFF8E54E9)],
       'accent': const Color(0xFF7FFFFF),
-      'route': '/products',
+      'route': '/home',
     },
     {
       'title': 'Home Decor Week',
       'subtitle': 'Transform your living space',
       'discount': '60',
       'tag': 'FLASH SALE',
-      'gradient': [const Color(0xFF0B6B43), const Color(0xFF56AB2F)],
+      'gradient': [AppColors.gradientStart, AppColors.gradientEnd],
       'accent': const Color(0xFFFFE55B),
-      'route': '/products',
+      'route': '/home',
     },
   ].obs;
 

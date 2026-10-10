@@ -194,18 +194,19 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
             const SizedBox(height: 18),
             _buildInputLabel('OTP Code'),
             const SizedBox(height: 8),
-            TextField(
+            CommonInputField.field(
               controller: controller.otpController,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               maxLength: 6,
-              style: const TextStyle(
+              textStyle: const TextStyle(
                 fontSize: 24,
                 letterSpacing: 8,
                 fontWeight: FontWeight.w600,
                 color: AppColors.deepBlueColor,
               ),
-              decoration: InputDecoration(
+              radius: 14,
+              decorationOverride: InputDecoration(
                 counterText: '',
                 hintText: '000000',
                 filled: true,

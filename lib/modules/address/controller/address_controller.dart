@@ -1,7 +1,16 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import '../../../shared/demo/demo_account_store.dart';
+import '../../../shared/utils/location_util.dart';
 
 class AddressController extends GetxController {
+  static AddressController ensureInitialized() {
+    if (Get.isRegistered<AddressController>()) {
+      return Get.find<AddressController>();
+    }
+    return Get.put(AddressController(), permanent: true);
+  }
+
   final RxBool isFormVisible = false.obs;
   final RxString selectedType = 'Home'.obs;
   final RxInt _idCounter = 3.obs;
@@ -9,40 +18,28 @@ class AddressController extends GetxController {
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final streetController = TextEditingController();
+  final buildingController = TextEditingController();
+  final landmarkController = TextEditingController();
   final cityController = TextEditingController();
   final stateController = TextEditingController();
   final pincodeController = TextEditingController();
 
-  final addresses = [
-    {
-      'id': '1',
-      'type': 'Home',
-      'name': 'John Doe',
-      'phone': '9999999999',
-      'street': '123 Main St',
-      'city': 'Mumbai',
-      'state': 'Maharashtra',
-      'pincode': '400001',
-      'isDefault': true,
-    },
-    {
-      'id': '2',
-      'type': 'Office',
-      'name': 'John Doe',
-      'phone': '9999999999',
-      'street': '456 Business Ave',
-      'city': 'Bangalore',
-      'state': 'Karnataka',
-      'pincode': '560001',
-      'isDefault': false,
-    },
-  ].obs;
+  final RxList<Map<String, dynamic>> addresses = DemoAccountStore.addresses.obs;
+
+  Map<String, dynamic>? get selectedAddress {
+    for (final address in addresses) {
+      if (address['isDefault'] == true) return address;
+    }
+    return addresses.isEmpty ? null : addresses.first;
+  }
 
   @override
   void onClose() {
     nameController.dispose();
     phoneController.dispose();
     streetController.dispose();
+    buildingController.dispose();
+    landmarkController.dispose();
     cityController.dispose();
     stateController.dispose();
     pincodeController.dispose();
@@ -61,32 +58,76 @@ class AddressController extends GetxController {
     selectedType.value = type;
   }
 
-  void useCurrentLocation() {
-    streetController.text = 'Current Location Street';
-    cityController.text = 'Mumbai';
-    stateController.text = 'Maharashtra';
-    pincodeController.text = '400001';
-    if (!isFormVisible.value) {
-      isFormVisible.value = true;
-    }
-    Get.snackbar(
-      'Location Added',
-      'Current location filled in address form',
-      duration: const Duration(milliseconds: 1400),
+  Future<void> fillAddressFromCoordinates(
+    double latitude,
+    double longitude,
+  ) async {
+    final address = await LocationUtil.getAddressFromCoordinates(
+      latitude,
+      longitude,
     );
+    if (address == null) {
+      Get.snackbar(
+        'Address not found',
+        'Please enter the address details manually.',
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    streetController.text = address['street'] ?? '';
+    cityController.text = address['city'] ?? '';
+    stateController.text = address['state'] ?? '';
+    pincodeController.text = address['pincode'] ?? '';
+
+    if (address.values.any((value) => value.isEmpty)) {
+      Get.snackbar(
+        'Location added',
+        'Review the address and complete any missing fields before saving.',
+        duration: const Duration(seconds: 3),
+      );
+    } else {
+      Get.snackbar(
+        'Location added',
+        'Review or edit the filled address before saving.',
+        duration: const Duration(seconds: 2),
+      );
+    }
+  }
+
+  Future<void> useCurrentLocation() async {
+    isFormVisible.value = true;
+    try {
+      final coordinates = await LocationUtil.getLatLong();
+      if (coordinates is! List || coordinates.length < 2) {
+        throw StateError('Current location is unavailable.');
+      }
+      await fillAddressFromCoordinates(
+        (coordinates[0] as num).toDouble(),
+        (coordinates[1] as num).toDouble(),
+      );
+    } catch (_) {
+      Get.snackbar(
+        'Location unavailable',
+        'Allow location access or choose a point on the map.',
+        duration: const Duration(seconds: 2),
+      );
+    }
   }
 
   void clearForm() {
     nameController.clear();
     phoneController.clear();
     streetController.clear();
+    buildingController.clear();
+    landmarkController.clear();
     cityController.clear();
     stateController.clear();
     pincodeController.clear();
     selectedType.value = 'Home';
   }
 
-  void saveAddress() {
+  bool saveAddress() {
     if (nameController.text.trim().isEmpty ||
         phoneController.text.trim().isEmpty ||
         streetController.text.trim().isEmpty ||
@@ -98,7 +139,7 @@ class AddressController extends GetxController {
         'Please fill all address fields',
         duration: const Duration(milliseconds: 1400),
       );
-      return;
+      return false;
     }
 
     addresses.insert(0, {
@@ -107,6 +148,8 @@ class AddressController extends GetxController {
       'name': nameController.text.trim(),
       'phone': phoneController.text.trim(),
       'street': streetController.text.trim(),
+      'building': buildingController.text.trim(),
+      'landmark': landmarkController.text.trim(),
       'city': cityController.text.trim(),
       'state': stateController.text.trim(),
       'pincode': pincodeController.text.trim(),
@@ -122,6 +165,7 @@ class AddressController extends GetxController {
       'Your new address has been saved',
       duration: const Duration(milliseconds: 1400),
     );
+    return true;
   }
 
   void addAddress() {

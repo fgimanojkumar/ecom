@@ -1,9 +1,11 @@
-import 'package:imoss/shared/style/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:imoss/shared/utils/responsive_util.dart';
-import 'package:imoss/shared/widgets/premium_app_bar.dart';
 
+import '../../../shared/demo/demo_account_store.dart';
+import '../../../shared/style/app_colors.dart';
+import '../../../shared/utils/responsive_util.dart';
+import '../../../shared/widgets/common_input_field.dart';
+import '../../../shared/widgets/premium_app_bar.dart';
 import '../controller/address_controller.dart';
 
 class AddressView extends GetView<AddressController> {
@@ -218,6 +220,16 @@ class AddressView extends GetView<AddressController> {
           const SizedBox(height: 10),
           _textField(controller.streetController, 'Street Address'),
           const SizedBox(height: 10),
+          _textField(
+            controller.buildingController,
+            'Building / Apartment (optional)',
+          ),
+          const SizedBox(height: 10),
+          _textField(
+            controller.landmarkController,
+            'Landmark (optional)',
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(child: _textField(controller.cityController, 'City')),
@@ -257,10 +269,7 @@ class AddressView extends GetView<AddressController> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    controller.saveAddress();
-                    controller.hideForm();
-                  },
+                  onPressed: controller.saveAddress,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary1,
                     foregroundColor: AppColors.white,
@@ -391,7 +400,7 @@ class AddressView extends GetView<AddressController> {
           ),
           const SizedBox(height: 8),
           Text(
-            '${address['street']}, ${address['city']}, ${address['state']} - ${address['pincode']}',
+            DemoAccountStore.formatAddress(address),
             style: const TextStyle(
               color: AppColors.black2,
               fontSize: 13,
@@ -427,24 +436,13 @@ class AddressView extends GetView<AddressController> {
     String hint, {
     TextInputType keyboardType = TextInputType.text,
   }) {
-    return TextField(
+    return CommonInputField.field(
       controller: fieldController,
+      hintText: hint,
       keyboardType: keyboardType,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(
-          color: AppColors.muteIconColor,
-          fontSize: 13,
-        ),
-        filled: true,
-        fillColor: AppColors.white1,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
+      fillColor: AppColors.white1,
+      radius: 12,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     );
   }
 }

@@ -116,7 +116,7 @@ class _NotificationCard extends StatelessWidget {
     ),
     'offer': (
       icon: Icons.local_offer_rounded,
-      colors: [Color(0xFF0F6B43), Color(0xFF37C87A)],
+      colors: [AppColors.gradientStart, AppColors.gradientEnd],
     ),
     'promotion': (
       icon: Icons.celebration_rounded,

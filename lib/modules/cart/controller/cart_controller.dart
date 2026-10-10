@@ -2,8 +2,12 @@ import 'package:get/get.dart';
 import '../../../data/models/cart_model.dart';
 import '../../../data/models/product_model.dart';
 import '../../coupon/controller/coupon_controller.dart';
+import '../../../shared/widgets/app_toast.dart';
 
 class CartController extends GetxController {
+  static const double shippingCharge = 50.0;
+  static const double taxRate = 0.18;
+
   static CartController ensureInitialized() {
     if (Get.isRegistered<CartController>()) {
       return Get.find<CartController>();
@@ -14,126 +18,6 @@ class CartController extends GetxController {
 
   final cartItems = <CartItem>[].obs;
   final appliedCoupon = Rxn<String>();
-
-  @override
-  void onInit() {
-    super.onInit();
-    if (cartItems.isEmpty) {
-      addDefaultItems();
-    }
-  }
-
-  void addDefaultItems() {
-    final defaultProducts = [
-      Product(
-        id: '1',
-        name: 'Premium Wireless Headphones',
-        description: 'High-quality wireless headphones with noise cancellation',
-        price: 89.99,
-        originalPrice: 129.99,
-        rating: 4.5,
-        reviewCount: 234,
-        image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10',
-        images: [
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10'
-        ],
-        category: 'Electronics',
-        subCategory: 'Audio',
-        stock: 15,
-        sizes: const [],
-        colors: const ['Black', 'Silver'],
-      ),
-      Product(
-        id: '2',
-        name: 'Designer T-Shirt',
-        description: 'Comfortable and stylish cotton t-shirt',
-        price: 34.99,
-        originalPrice: 49.99,
-        rating: 4.3,
-        reviewCount: 156,
-        image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShJSnrJ5cmEu2ATSO1hEJqhubzMOi0hcut9UxNSKlrOg&s=10',
-        images: [
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShJSnrJ5cmEu2ATSO1hEJqhubzMOi0hcut9UxNSKlrOg&s=10'
-        ],
-        category: 'Fashion',
-        subCategory: 'Men',
-        stock: 50,
-        sizes: const ['S', 'M', 'L', 'XL'],
-        colors: const ['White', 'Black', 'Blue'],
-      ),
-      Product(
-        id: '3',
-        name: 'Leather Wallet',
-        description: 'Premium genuine leather wallet with RFID protection',
-        price: 59.99,
-        originalPrice: 79.99,
-        rating: 4.7,
-        reviewCount: 89,
-        image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAPf_062JKWOBQr9rKxfyjLtlwzCn6Wwx_fJ6vQDIAgQ&s=10',
-        images: [
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAPf_062JKWOBQr9rKxfyjLtlwzCn6Wwx_fJ6vQDIAgQ&s=10'
-        ],
-        category: 'Accessories',
-        subCategory: 'Wallets',
-        stock: 25,
-        sizes: const [],
-        colors: const ['Brown', 'Black'],
-      ),
-      Product(
-        id: '4',
-        name: 'Running Shoes',
-        description: 'Lightweight running shoes with cushioned sole',
-        price: 124.99,
-        originalPrice: 169.99,
-        rating: 4.6,
-        reviewCount: 342,
-        image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR86kczML_kdfQjmwvRHp1IZCPFbH-HGah5_aV20HwoBw&s=10',
-        images: [
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR86kczML_kdfQjmwvRHp1IZCPFbH-HGah5_aV20HwoBw&s=10'
-        ],
-        category: 'Footwear',
-        subCategory: 'Sports',
-        stock: 30,
-        sizes: const ['6', '7', '8', '9', '10', '11'],
-        colors: const ['Black', 'White', 'Red'],
-      ),
-      Product(
-        id: '5',
-        name: 'Stainless Steel Watch',
-        description: 'Elegant analog watch with leather strap',
-        price: 199.99,
-        originalPrice: 299.99,
-        rating: 4.8,
-        reviewCount: 127,
-        image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10',
-        images: [
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvRPlWzR86Xg8pC8XAz_FTllGOta5N0-nDOMsPp96btw&s=10'
-        ],
-        category: 'Accessories',
-        subCategory: 'Watches',
-        stock: 18,
-        sizes: const [],
-        colors: const ['Silver', 'Gold'],
-      ),
-    ];
-
-    for (var product in defaultProducts) {
-      cartItems.add(
-        CartItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + product.id,
-          product: product,
-          quantity: 1,
-          selectedSize: '',
-          selectedColor: '',
-        ),
-      );
-    }
-  }
 
   void addToCart(
     Product product, {
@@ -159,7 +43,7 @@ class CartController extends GetxController {
     } else {
       cartItems.add(
         CartItem(
-          id: DateTime.now().toString(),
+          id: 'cart-${DateTime.now().microsecondsSinceEpoch}',
           product: product,
           quantity: quantity,
           selectedSize: size,
@@ -167,10 +51,14 @@ class CartController extends GetxController {
         ),
       );
     }
-    Get.snackbar('Success', 'Product added to cart');
+    update();
+    AppToast.successToast('${product.name} added to cart');
   }
 
-  void addMapProductToCart(Map<String, dynamic> productMap) {
+  void addMapProductToCart(
+    Map<String, dynamic> productMap, {
+    int quantity = 1,
+  }) {
     final parsedPrice = (productMap['price'] as num?)?.toDouble() ?? 0;
     final parsedOriginalPrice =
         (productMap['originalPrice'] as num?)?.toDouble() ?? parsedPrice;
@@ -195,11 +83,12 @@ class CartController extends GetxController {
       colors: const <String>[],
     );
 
-    addToCart(product);
+    addToCart(product, quantity: quantity);
   }
 
   void removeFromCart(String itemId) {
     cartItems.removeWhere((item) => item.id == itemId);
+    update();
   }
 
   void updateQuantity(String itemId, int quantity) {
@@ -210,12 +99,13 @@ class CartController extends GetxController {
     final index = cartItems.indexWhere((item) => item.id == itemId);
     if (index >= 0) {
       cartItems[index] = cartItems[index].copyWith(quantity: quantity);
+      update();
     }
   }
 
   void applyCoupon(String code) {
     appliedCoupon.value = code;
-    Get.snackbar('Success', 'Coupon applied');
+    update();
   }
 
   // Reads applied coupon from CouponController and computes % discount
@@ -242,8 +132,19 @@ class CartController extends GetxController {
   }
 
   double get subtotal => cartItems.fold(0, (sum, item) => sum + item.subtotal);
-  double get tax => subtotal * 0.18;
-  double get total => subtotal + tax + 50;
+  double get productSavings => cartItems.fold(
+        0,
+        (sum, item) =>
+            sum +
+            ((item.product.originalPrice - item.product.price)
+                    .clamp(0.0, double.infinity) *
+                item.quantity),
+      );
+  double get totalSavings => productSavings + couponDiscount;
+  double get discountedSubtotal =>
+      (subtotal - couponDiscount).clamp(0.0, subtotal).toDouble();
+  double get tax => discountedSubtotal * taxRate;
+  double get total => discountedSubtotal + tax + shippingCharge;
 
   int get itemCount => cartItems.fold<int>(
       0, (sum, item) => sum + (item.quantity > 0 ? item.quantity : 0));

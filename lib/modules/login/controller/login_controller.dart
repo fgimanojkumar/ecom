@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:imoss/shared/style/app_colors.dart';
+import '../../../shared/demo/demo_account_store.dart';
 
 class LoginController extends GetxController {
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -14,10 +17,12 @@ class LoginController extends GetxController {
   // OTP fields for 4 boxes.
   late List<TextEditingController> otpControllers;
   late List<FocusNode> otpFocusNodes;
+  Timer? _otpResendTimer;
 
   final isPasswordVisible = false.obs;
   final isLoading = false.obs;
   final isMobileValid = false.obs;
+  final resendOtpCountdown = 0.obs;
   final loginMode = 'unknown'.obs;
   final selectedLoginPurpose = 'Personal Shopping'.obs;
 
@@ -46,6 +51,21 @@ class LoginController extends GetxController {
     otpControllers = List.generate(4, (_) => TextEditingController());
     otpFocusNodes = List.generate(4, (_) => FocusNode());
     identifierController.addListener(_handleIdentifierChanged);
+    identifierController.text = DemoAccountStore.demoMobile;
+    const demoOtp = DemoAccountStore.demoOtp;
+    for (var index = 0; index < otpControllers.length; index++) {
+      if (index < demoOtp.length) {
+        otpControllers[index].text = demoOtp[index];
+      }
+    }
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      final user = await DemoAccountStore.restoreSession();
+      if (user != null) Get.offAllNamed('/home');
+    } catch (_) {}
   }
 
   void _handleIdentifierChanged() {
@@ -73,9 +93,13 @@ class LoginController extends GetxController {
 
     if (previousMode != loginMode.value) {
       if (loginMode.value != 'mobile') {
+        _otpResendTimer?.cancel();
+        resendOtpCountdown.value = 0;
         for (final TextEditingController otpFieldController in otpControllers) {
           otpFieldController.clear();
         }
+      } else if (isMobileValid.value) {
+        _startOtpResendCountdown();
       }
       if (loginMode.value != 'email') {
         passwordController.clear();
@@ -98,6 +122,7 @@ class LoginController extends GetxController {
 
   @override
   void onClose() {
+    _otpResendTimer?.cancel();
     identifierController.dispose();
     emailController.dispose();
     passwordController.dispose();
@@ -128,8 +153,75 @@ class LoginController extends GetxController {
     return otpControllers.map((c) => c.text).join();
   }
 
+  void resendOtp() {
+    if (resendOtpCountdown.value > 0 || loginMode.value != 'mobile') return;
+
+    const demoOtp = DemoAccountStore.demoOtp;
+    for (var index = 0; index < otpControllers.length; index++) {
+      otpControllers[index].text = index < demoOtp.length ? demoOtp[index] : '';
+    }
+    _startOtpResendCountdown();
+    Get.snackbar(
+      'OTP sent',
+      'Demo OTP: $demoOtp',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
+  void _startOtpResendCountdown() {
+    _otpResendTimer?.cancel();
+    resendOtpCountdown.value = 30;
+    _otpResendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (resendOtpCountdown.value <= 1) {
+        resendOtpCountdown.value = 0;
+        timer.cancel();
+        _otpResendTimer = null;
+      } else {
+        resendOtpCountdown.value--;
+      }
+    });
+  }
+
   Future<void> submitLogin() async {
-    await goToHome();
+    if (isLoading.value) return;
+
+    isLoading.value = true;
+    var isAuthenticated = false;
+    var errorMessage = 'Use the demo credentials shown on this screen.';
+
+    try {
+      if (loginMode.value == 'email') {
+        isAuthenticated = await DemoAccountStore.signInWithPassword(
+          identifier: identifierController.text,
+          password: passwordController.text,
+        );
+      } else if (loginMode.value == 'mobile' && isMobileValid.value) {
+        isAuthenticated = await DemoAccountStore.signInWithOtp(
+          mobile: mobileController.text,
+          otp: getOtp(),
+        );
+      } else if (loginMode.value == 'mobile') {
+        errorMessage = 'Enter the demo 10-digit mobile number.';
+      } else {
+        errorMessage = 'Enter the demo email or mobile number to continue.';
+      }
+    } catch (_) {
+      errorMessage = 'Could not start the demo session. Please try again.';
+    } finally {
+      isLoading.value = false;
+    }
+
+    if (!isAuthenticated) {
+      Get.snackbar(
+        'Unable to sign in',
+        errorMessage,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.error.withOpacity(0.12),
+      );
+      return;
+    }
+
+    Get.offAllNamed('/home');
   }
 
   Future<void> goToHome() async {
@@ -139,47 +231,13 @@ class LoginController extends GetxController {
   }
 
   Future<void> login() async {
-    final String email = identifierController.text.trim();
-    final bool isValidEmail = _emailPattern.hasMatch(email);
-
-    if (!isValidEmail || passwordController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid email and password.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error.withOpacity(0.12),
-      );
-      return;
-    }
-
-    emailController.text = email;
-    isLoading.value = true;
-    isLoading.value = false;
-    Get.offAllNamed('/home');
+    await submitLogin();
   }
 
   Future<void> loginWithMobile() async {
-    final String digitsOnly =
-        identifierController.text.trim().replaceAll(RegExp(r'\D'), '');
-    final String normalizedMobile = _normalizeMobileDigits(digitsOnly);
-
-    if (normalizedMobile.length != 10 || getOtp().length != 4) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid mobile number and 4-digit OTP.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error.withOpacity(0.12),
-      );
-      return;
-    }
-
-    mobileController.text = normalizedMobile;
-    isLoading.value = true;
-    isLoading.value = false;
-    Get.offAllNamed('/home');
+    await submitLogin();
   }
 
-  void goToSignUp() => Get.toNamed('/signup');
   void goToForgotPassword() => Get.toNamed('/forgotPassword');
 
   void updateLoginPurpose(String? value) {

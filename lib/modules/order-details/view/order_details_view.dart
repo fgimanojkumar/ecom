@@ -5,9 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../modules/cart/controller/cart_controller.dart';
+import '../../../shared/demo/demo_account_store.dart';
 import '../../../shared/style/app_colors.dart';
 import '../../../shared/utils/responsive_util.dart';
+import '../../../shared/widgets/common_input_field.dart';
 import '../../../shared/widgets/premium_app_bar.dart';
 
 class OrderDetailsView extends StatefulWidget {
@@ -24,22 +28,60 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   bool _isSubmitting = false;
   static const int _maxImages = 5;
 
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'Premium Smart Watch',
-      'image':
-          'https://www.equinetmedia.com/hubfs/How-to-find-b2b-blog-images.png',
-      'qty': 1,
-      'price': 4999,
-    },
-    {
-      'name': 'Wireless Earbuds Pro',
-      'image':
-          'https://www.equinetmedia.com/hubfs/How-to-find-b2b-blog-images.png',
-      'qty': 2,
-      'price': 2499,
-    },
-  ];
+  Map<String, dynamic> get _selectedOrder {
+    final orderId = Get.arguments?.toString();
+    return DemoAccountStore.orders.firstWhere(
+      (order) => order['id'] == orderId,
+      orElse: () => DemoAccountStore.orders.first,
+    );
+  }
+
+  List<Map<String, dynamic>> get _products =>
+      (_selectedOrder['lines'] as List<Map<String, dynamic>>?) ?? [];
+
+  void _reorder() {
+    final cart = CartController.ensureInitialized();
+    for (var index = 0; index < _products.length; index++) {
+      final line = _products[index];
+      final price = (line['price'] as num?)?.toDouble() ?? 0;
+      cart.addMapProductToCart(
+        {
+          ...line,
+          'id': line['id'] ?? '${_selectedOrder['id']}-$index',
+          'originalPrice': line['originalPrice'] ?? price,
+          'category': line['category'] ?? 'Reorder',
+          'stock': 50,
+        },
+        quantity: (line['qty'] as num?)?.toInt() ?? 1,
+      );
+    }
+    Get.toNamed('/cart');
+  }
+
+  Future<void> _shareInvoice() async {
+    final order = _selectedOrder;
+    final lines = _products
+        .map((item) => '${item['name']}  x${item['qty']}  ₹${item['price']}')
+        .join('\n');
+    await Share.share(
+      'Bhabsa demo invoice\nOrder: ${order['id']}\nDate: ${order['date']}\n$lines\nTotal: ₹${order['total']}',
+      subject: 'Invoice ${order['id']}',
+    );
+  }
+
+  void _requestReturn() {
+    if (_selectedOrder['status'] != 'Delivered') {
+      Get.snackbar(
+          'Return unavailable', 'Returns can be requested after delivery.');
+      return;
+    }
+    if (_selectedOrder['returnRequestStatus'] != null) {
+      Get.toNamed('/returnStatus', arguments: _selectedOrder['id']);
+      return;
+    }
+    setState(() => _selectedOrder['returnRequestStatus'] = 'Requested');
+    Get.toNamed('/returnStatus', arguments: _selectedOrder['id']);
+  }
 
   @override
   void dispose() {
@@ -120,19 +162,52 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: Column(
             children: [
-              _buildOrderStatus(),
+              _buildOrderOverview(),
               const SizedBox(height: 16),
-              _buildTracking(),
-              const SizedBox(height: 16),
-              _buildProducts(),
-              const SizedBox(height: 16),
-              _buildAddress(),
-              const SizedBox(height: 16),
-              _buildPayment(),
-              const SizedBox(height: 16),
-              _buildSummary(),
-              const SizedBox(height: 16),
-              _buildActions(),
+              if (MediaQuery.sizeOf(context).width >= 900)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        children: [
+                          _buildTracking(),
+                          const SizedBox(height: 16),
+                          _buildProducts(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        children: [
+                          _buildAddress(),
+                          const SizedBox(height: 16),
+                          _buildPayment(),
+                          const SizedBox(height: 16),
+                          _buildSummary(),
+                          const SizedBox(height: 16),
+                          _buildActions(),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              else ...[
+                _buildTracking(),
+                const SizedBox(height: 16),
+                _buildProducts(),
+                const SizedBox(height: 16),
+                _buildAddress(),
+                const SizedBox(height: 16),
+                _buildPayment(),
+                const SizedBox(height: 16),
+                _buildSummary(),
+                const SizedBox(height: 16),
+                _buildActions(),
+              ],
               const SizedBox(height: 16),
               _buildReviewSection(),
               const SizedBox(height: 80),
@@ -161,7 +236,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: _reorder,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Reorder'),
               style: OutlinedButton.styleFrom(
@@ -190,7 +265,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 ],
               ),
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: _shareInvoice,
                 icon: const Icon(Icons.download_rounded,
                     color: AppColors.white, size: 18),
                 label: const Text('Invoice',
@@ -211,52 +286,172 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
   }
 
-  Widget _buildOrderStatus() {
+  Widget _buildOrderOverview() {
+    final order = _selectedOrder;
+    final status = order['status'] as String? ?? 'Processing';
+    final statusColor = status == 'Delivered'
+        ? AppColors.success
+        : status == 'Cancelled' || status == 'Returned'
+            ? AppColors.error
+            : AppColors.info;
+    final orderId = order['id'] as String? ?? 'Order';
+    final date = order['date'] as String? ?? 'Date unavailable';
+    final itemCount = order['items'] ?? _products.length;
+    final total = (order['total'] as num?)?.toDouble() ?? 0;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [AppColors.primary1, AppColors.gradientEnd],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8ECE9)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary1.withOpacity(0.38),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: AppColors.primary1.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.black.withOpacity(0.045),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle_rounded, color: AppColors.white, size: 58),
-          SizedBox(height: 10),
-          Text(
-            'Delivered Successfully',
-            style: TextStyle(
-                color: AppColors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.primary1.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: AppColors.primary1,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ORDER NUMBER',
+                      style: TextStyle(
+                        color: AppColors.black2,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      orderId,
+                      style: const TextStyle(
+                        color: AppColors.black1,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 4),
-          Text(
-            'Order #ORD-20250728',
-            style: TextStyle(
-                color: AppColors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w400),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(height: 1),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _overviewMetric(
+                  icon: Icons.shopping_bag_outlined,
+                  label: 'Items',
+                  value: '$itemCount',
+                ),
+              ),
+              Expanded(
+                child: _overviewMetric(
+                  icon: Icons.payments_outlined,
+                  label: 'Order total',
+                  value: '₹${total.toStringAsFixed(2)}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_outlined,
+                color: AppColors.muteIconColor,
+                size: 14,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Placed on $date',
+                style: const TextStyle(
+                  color: AppColors.black2,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _overviewMetric({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.primary1, size: 17),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: AppColors.black2, fontSize: 11),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.black1,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -315,15 +510,20 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   Widget _buildTracking() {
+    final status = _selectedOrder['status'] as String? ?? 'Processing';
+    final orderDate = _selectedOrder['date'] as String? ?? '';
+    final isShipped = status == 'In Transit' || status == 'Delivered';
+    final isDelivered = status == 'Delivered';
+
     return _sectionCard(
       title: 'Order Tracking',
       titleIcon: Icons.local_shipping_rounded,
       child: Column(
         children: [
-          _timelineStep('Order Placed', '28 Jul 2025', true),
-          _timelineStep('Packed', '29 Jul 2025', true),
-          _timelineStep('Shipped', '30 Jul 2025', true),
-          _timelineStep('Delivered', '01 Aug 2025', true, isLast: true),
+          _timelineStep('Order Placed', orderDate, true),
+          _timelineStep('Processing', orderDate, true),
+          _timelineStep('Shipped', orderDate, isShipped),
+          _timelineStep('Delivered', orderDate, isDelivered, isLast: true),
         ],
       ),
     );
@@ -408,16 +608,24 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             const Divider(height: 24, color: Color(0xFFF0F0F0)),
         itemBuilder: (context, index) {
           final product = _products[index];
+          final imagePath = product['image'] as String? ?? '';
           return Row(
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  product['image'],
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
+                child: imagePath.startsWith('http')
+                    ? Image.network(
+                        imagePath,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.asset(
+                        imagePath,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -450,55 +658,86 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   Widget _buildAddress() {
+    final addressId = _selectedOrder['addressId'];
+    final deliveryAddress = DemoAccountStore.addresses.firstWhere(
+      (item) => item['id'] == addressId,
+      orElse: () => DemoAccountStore.addresses.first,
+    );
+    final billingAddress = DemoAccountStore.addresses.firstWhere(
+      (item) => item['id'] == (_selectedOrder['billingAddressId'] ?? addressId),
+      orElse: () => deliveryAddress,
+    );
+
     return _sectionCard(
-      title: 'Delivery Address',
+      title: 'Billing & Delivery Addresses',
       titleIcon: Icons.location_on_rounded,
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary1.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.home_rounded,
-                color: AppColors.primary1, size: 22),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Manoj Kumar',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                SizedBox(height: 4),
-                Text('Thane, Maharashtra - 400601',
-                    style: TextStyle(fontSize: 13)),
-                Text('India', style: TextStyle(fontSize: 13)),
-                SizedBox(height: 5),
-                Text('+91 9876543210',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.primary2,
-                        fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
+          _addressInfo('Delivery', deliveryAddress),
+          const SizedBox(height: 16),
+          _addressInfo('Billing', billingAddress),
         ],
       ),
     );
   }
 
+  Widget _addressInfo(String label, Map<String, dynamic> address) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: AppColors.primary1.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.home_rounded,
+              color: AppColors.primary1, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 4),
+              Text(address['name'] as String,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14)),
+              const SizedBox(height: 4),
+              Text(
+                DemoAccountStore.formatAddress(address),
+                style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '+91 ${address['phone']}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primary2,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPayment() {
+    final paymentMethod = _selectedOrder['paymentMethod'] as String? ?? 'Demo';
+
     return _sectionCard(
       title: 'Payment Details',
       titleIcon: Icons.payment_rounded,
       child: Column(
         children: [
-          _paymentRow(
-              'Payment Method', 'UPI', Icons.account_balance_wallet_rounded),
+          _paymentRow('Payment Method', paymentMethod,
+              Icons.account_balance_wallet_rounded),
           const SizedBox(height: 12),
           _paymentRow('Payment Status', 'Paid', Icons.check_circle_rounded,
               valueColor: AppColors.success),
@@ -529,29 +768,40 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   Widget _buildSummary() {
+    final subtotal = (_selectedOrder['subtotal'] as num?)?.toDouble() ??
+        (_selectedOrder['total'] as num).toDouble();
+    final shipping = (_selectedOrder['shipping'] as num?)?.toDouble() ?? 0;
+    final tax = (_selectedOrder['tax'] as num?)?.toDouble() ?? 0;
+    final total = (_selectedOrder['total'] as num).toDouble();
+
     return _sectionCard(
       title: 'Price Summary',
       titleIcon: Icons.receipt_long_rounded,
-      child: const Column(
+      child: Column(
         children: [
-          SummaryRow('Subtotal', '\u20b99,997'),
-          SummaryRow('Shipping', '\u20b950'),
-          SummaryRow('GST', '\u20b91,800'),
-          Padding(
+          SummaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
+          SummaryRow('Shipping', '₹${shipping.toStringAsFixed(2)}'),
+          SummaryRow('GST', '₹${tax.toStringAsFixed(2)}'),
+          const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
             child: Divider(),
           ),
-          SummaryRow('Total', '\u20b911,847', isTotal: true),
+          SummaryRow('Total', '₹${total.toStringAsFixed(2)}', isTotal: true),
         ],
       ),
     );
   }
 
   Widget _buildActions() {
+    final hasReturnRequest = _selectedOrder['returnRequestStatus'] != null;
     final actions = [
-      {'icon': Icons.location_on_rounded, 'label': 'Track Order'},
       {'icon': Icons.download_rounded, 'label': 'Invoice'},
-      {'icon': Icons.assignment_return_rounded, 'label': 'Return'},
+      {
+        'icon': hasReturnRequest
+            ? Icons.assignment_return_outlined
+            : Icons.assignment_return_rounded,
+        'label': hasReturnRequest ? 'Refund Status' : 'Return',
+      },
       {'icon': Icons.support_agent_rounded, 'label': 'Support'},
     ];
     return _sectionCard(
@@ -569,7 +819,18 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         itemCount: actions.length,
         itemBuilder: (_, i) {
           return OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              switch (actions[i]['label']) {
+                case 'Invoice':
+                  _shareInvoice();
+                case 'Return':
+                  _requestReturn();
+                case 'Refund Status':
+                  Get.toNamed('/returnStatus', arguments: _selectedOrder['id']);
+                case 'Support':
+                  Get.toNamed('/support');
+              }
+            },
             icon: Icon(actions[i]['icon'] as IconData, size: 16),
             label: Text(actions[i]['label'] as String,
                 style: const TextStyle(fontSize: 12)),
@@ -697,33 +958,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 const SizedBox(height: 18),
 
                 // Review text field
-                TextField(
+                CommonInputField.field(
                   controller: _reviewController,
                   maxLines: 4,
                   maxLength: 500,
-                  decoration: InputDecoration(
-                    hintText: 'Share your experience with this order...',
-                    hintStyle:
-                        TextStyle(color: AppColors.muteIconColor, fontSize: 13),
-                    filled: true,
-                    fillColor: const Color(0xFFF6F8FA),
-                    contentPadding: const EdgeInsets.all(14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(
-                          color: AppColors.primary1, width: 1.5),
-                    ),
-                    counterStyle:
-                        TextStyle(color: AppColors.muteIconColor, fontSize: 11),
-                  ),
+                  hintText: 'Share your experience with this order...',
+                  fillColor: const Color(0xFFF6F8FA),
+                  radius: 14,
+                  contentPadding: const EdgeInsets.all(14),
+                  showCounter: true,
                 ),
 
                 const SizedBox(height: 18),

@@ -1,13 +1,11 @@
 import 'package:get/get.dart';
 
 import '../../../routes/app_pages.dart';
-import '../../../shared/flutterStorage/flutter_storage_keys.dart';
-import '../../../shared/localStorage/local_storage.dart';
+import '../../../shared/demo/demo_account_store.dart';
 import '../../../shared/widgets/dialogs.dart';
 
 class AppController extends GetxController {
   Dialogs dialogs = Dialogs();
-  LocalStorage localStorage = LocalStorage();
 
   logoutConfirm() {
     dialogs.logoutConfirm(
@@ -16,9 +14,8 @@ class AppController extends GetxController {
     );
   }
 
-  logout() {
-    localStorage.removeStorageItem(FlutterStorageKeys().userId);
-    localStorage.removeStorageItem(FlutterStorageKeys().token);
+  Future<void> logout() async {
+    await DemoAccountStore.signOut();
     Get.offAllNamed(AppRoutes().login);
   }
 }

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:imoss/shared/widgets/app_toast.dart';
 import 'package:imoss/shared/widgets/premium_app_bar.dart';
 import 'package:imoss/shared/utils/responsive_util.dart';
+import '../../cart/controller/cart_controller.dart';
 
 import '../controller/coupon_controller.dart';
 
@@ -139,7 +140,17 @@ class CouponView extends GetView<CouponController> {
                             ? null
                             : isApplied
                                 ? controller.removeCoupon
-                                : () => controller.applyCoupon(code),
+                                : () {
+                                    final cart =
+                                        CartController.ensureInitialized();
+                                    controller.applyCoupon(
+                                      code,
+                                      cartSubtotal: cart.subtotal,
+                                      cartCategories: cart.cartItems
+                                          .map((item) => item.product.category)
+                                          .toSet(),
+                                    );
+                                  },
                       );
                     },
                   ),
