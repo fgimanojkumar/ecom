@@ -10,7 +10,7 @@ class ProdConfig implements BaseConfig {
   String get env => Environment.PROD;
 
   @override
-  String get baseurl => 'https://congoprodapp.azurewebsites.net';
+  String get baseurl => '';
 
   @override
   String get defaultToken => '';
