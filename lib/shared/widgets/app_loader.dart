@@ -1,4 +1,4 @@
-import 'package:imoss/shared/style/app_colors.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
@@ -56,5 +56,61 @@ class AppLoader {
         ),
       ),
     );
+  }
+}
+
+class AppLoaderRouteObserver extends NavigatorObserver {
+  static const _minimumDisplayTime = Duration(milliseconds: 360);
+
+  OverlayEntry? _loaderEntry;
+  Timer? _hideTimer;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (route is PopupRoute) return;
+    _showLoader();
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (route is PopupRoute) return;
+    _showLoader();
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute is PopupRoute) return;
+    _showLoader();
+  }
+
+  void _showLoader() {
+    _hideTimer?.cancel();
+    _loaderEntry?.remove();
+
+    final overlay = navigator?.overlay;
+    if (overlay == null) return;
+
+    _loaderEntry = OverlayEntry(
+      builder: (_) => Stack(
+        children: [
+          ModalBarrier(
+            color: AppColors.white.withOpacity(0.78),
+            dismissible: false,
+          ),
+          AppLoader.onScreenLoader(),
+        ],
+      ),
+    );
+    overlay.insert(_loaderEntry!);
+    _hideTimer = Timer(_minimumDisplayTime, _hideLoader);
+  }
+
+  void _hideLoader() {
+    _loaderEntry?.remove();
+    _loaderEntry = null;
+    _hideTimer = null;
   }
 }

@@ -71,11 +71,15 @@ class ResponsiveWidget extends StatelessWidget {
 class ResponsiveContent extends StatelessWidget {
   final Widget child;
   final bool addHorizontalPadding;
+  final double? leftPadding;
+  final double? rightPadding;
 
   const ResponsiveContent({
     super.key,
     required this.child,
     this.addHorizontalPadding = false,
+    this.leftPadding,
+    this.rightPadding,
   });
 
   @override
@@ -83,12 +87,14 @@ class ResponsiveContent extends StatelessWidget {
     final maxWidth = ResponsiveUtil.maxContentWidth(context);
     final horizontal =
         addHorizontalPadding ? ResponsiveUtil.horizontalPadding(context) : 0.0;
+    final left = leftPadding ?? horizontal;
+    final right = rightPadding ?? horizontal;
 
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: horizontal),
+          padding: EdgeInsets.only(left: left, right: right),
           child: child,
         ),
       ),

@@ -23,6 +23,10 @@ class CommonDropdownField<T> extends StatelessWidget {
     this.labelText,
     this.hintText,
     this.radius = 16,
+    this.enabled = true,
+    this.readOnly = false,
+    this.validator,
+    this.fillColor = AppColors.white1,
   });
 
   final T? value;
@@ -31,15 +35,21 @@ class CommonDropdownField<T> extends StatelessWidget {
   final String? labelText;
   final String? hintText;
   final double radius;
+  final bool enabled;
+  final bool readOnly;
+  final FormFieldValidator<T>? validator;
+  final Color fillColor;
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
       value: value,
       isExpanded: true,
-      icon: const Icon(
-        Icons.keyboard_arrow_down_rounded,
-        color: AppColors.black2,
+      icon: Icon(
+        readOnly
+            ? Icons.lock_outline_rounded
+            : Icons.keyboard_arrow_down_rounded,
+        color: enabled ? AppColors.black2 : AppColors.muteIconColor,
       ),
       dropdownColor: AppColors.white,
       style: const TextStyle(
@@ -61,7 +71,7 @@ class CommonDropdownField<T> extends StatelessWidget {
           fontSize: 13,
         ),
         filled: true,
-        fillColor: AppColors.white1,
+        fillColor: enabled ? fillColor : AppColors.white2,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
@@ -80,6 +90,22 @@ class CommonDropdownField<T> extends StatelessWidget {
             width: 1.6,
           ),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(
+            color: AppColors.divider,
+            width: 1.2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.6),
+        ),
+        enabled: enabled,
       ),
       items: options.map((option) {
         return DropdownMenuItem<T>(
@@ -104,7 +130,8 @@ class CommonDropdownField<T> extends StatelessWidget {
           ),
         );
       }).toList(),
-      onChanged: onChanged,
+      onChanged: enabled && !readOnly ? onChanged : null,
+      validator: validator,
     );
   }
 }

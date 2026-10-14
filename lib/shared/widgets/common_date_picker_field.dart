@@ -14,6 +14,7 @@ class CommonDatePickerField extends StatefulWidget {
     super.key,
     required this.selectedDate,
     required this.onDateSelected,
+    this.controller,
     this.labelText,
     this.hintText = 'Select date',
     this.firstDate,
@@ -55,6 +56,7 @@ class CommonDatePickerField extends StatefulWidget {
 
   final DateTime? selectedDate;
   final ValueChanged<DateTime?> onDateSelected;
+  final TextEditingController? controller;
   final String? labelText;
   final String hintText;
   final DateTime? firstDate;
@@ -94,14 +96,17 @@ class CommonDatePickerField extends StatefulWidget {
 }
 
 class _CommonDatePickerFieldState extends State<CommonDatePickerField> {
-  late final TextEditingController _textController;
+  late TextEditingController _textController;
+  bool _ownsTextController = false;
 
   late final TextInputFormatter _singleDateManualFormatter;
 
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: _buildDisplayText());
+    _ownsTextController = widget.controller == null;
+    _textController =
+        widget.controller ?? TextEditingController(text: _buildDisplayText());
     _singleDateManualFormatter = _PatternDateTextInputFormatter(
       pattern: widget.dateFormatPattern,
       includeTime: widget.includeTime,
@@ -111,6 +116,11 @@ class _CommonDatePickerFieldState extends State<CommonDatePickerField> {
   @override
   void didUpdateWidget(covariant CommonDatePickerField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      if (_ownsTextController) _textController.dispose();
+      _ownsTextController = widget.controller == null;
+      _textController = widget.controller ?? TextEditingController();
+    }
     if (oldWidget.dateFormatPattern != widget.dateFormatPattern ||
         oldWidget.includeTime != widget.includeTime) {
       _singleDateManualFormatter = _PatternDateTextInputFormatter(
@@ -127,7 +137,7 @@ class _CommonDatePickerFieldState extends State<CommonDatePickerField> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    if (_ownsTextController) _textController.dispose();
     super.dispose();
   }
 

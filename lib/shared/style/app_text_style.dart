@@ -11,23 +11,18 @@ class AppTextStyle {
   }
 
   static TextStyle headingH1(heading, {bool mutedText = false}) {
-    double headingFontSize = 12.0;
+    double headingFontSize = 14.0;
     switch (heading) {
       case 'H1':
-        headingFontSize = 18.0;
-        break;
+        headingFontSize = 28.0;
       case 'H2':
-        headingFontSize = 16.0;
-        break;
+        headingFontSize = 22.0;
       case 'H3':
-        headingFontSize = 14.0;
-        break;
+        headingFontSize = 18.0;
       case 'H4':
-        headingFontSize = 12.0;
-        break;
+        headingFontSize = 16.0;
       case 'H5':
-        headingFontSize = 10.0;
-        break;
+        headingFontSize = 14.0;
     }
     return TextStyle(
       fontSize: headingFontSize,
