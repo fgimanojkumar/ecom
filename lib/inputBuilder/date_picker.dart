@@ -1,10 +1,10 @@
-import 'package:datetime_picker_formfield_new/datetime_picker_formfield.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/models/ui/input_control_item.dart';
 import '../shared/style/app_style.dart';
+import '../shared/widgets/common_date_picker_field.dart';
 
 class DatePickerControl extends StatefulWidget {
   final InputControlItem inputControlItem;
@@ -36,11 +36,15 @@ class DatePickerControl extends StatefulWidget {
 
 class _DatePickerControlState extends State<DatePickerControl> {
   InputControlItem inputControlItem = InputControlItem();
+  DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
     inputControlItem = widget.inputControlItem;
+    _selectedDate = _parseDate(
+      widget.controller?.text ?? widget.inputControlItem.inputValue,
+    );
   }
 
   @override
@@ -67,42 +71,41 @@ class _DatePickerControlState extends State<DatePickerControl> {
       padding: (!kIsWeb)
           ? AppPadding().formInputPadding
           : AppPadding().webFormInputPadding,
-      child: DateTimeField(
-        enabled: (!inputControlItem.isFreeze!),
+      child: CommonDatePickerField(
+        selectedDate: _selectedDate,
+        onDateSelected: (value) {
+          setState(() => _selectedDate = value);
+          widget.controller?.text =
+              value == null ? '' : DateFormat('dd/MM/yyyy').format(value);
+          widget.onChanged?.call(value);
+        },
         controller: widget.controller,
-        decoration: AppInputDecoration.inputDecorationFormWithBorder(
-          labelText:
-              '${widget.inputControlItem.labelText ?? ''} ${widget.inputControlItem.validation!.contains('REQUIRED') ? '*' : ''}',
-          hintText: 'Select Date',
-          isFreeze: inputControlItem.isFreeze!,
-        ),
-        style: AppTextStyle.textFieldTextStyle(
-          isFreeze: inputControlItem.isFreeze,
-        ),
-        resetIcon: null,
-        format: DateFormat('dd/MM/yyyy'),
-        onShowPicker: (context, currentValue) {
-          return showDatePicker(
-            context: context,
-            firstDate: firstDate,
-            initialDate: currentValue ?? initialDate,
-            lastDate: lastDate,
-          );
-        },
-        onChanged: widget.onChanged,
-        validator: (value) {
-          return _validateInput(value);
-        },
+        enabled: !inputControlItem.isFreeze!,
+        readOnly: inputControlItem.isFreeze!,
+        labelText:
+            '${widget.inputControlItem.labelText ?? ''} ${widget.inputControlItem.validation!.contains('REQUIRED') ? '*' : ''}',
+        hintText: 'Select Date',
+        firstDate: firstDate,
+        initialDate: initialDate,
+        lastDate: lastDate,
+        validator: _validateInput,
+        displayBuilder: (date) => DateFormat('dd/MM/yyyy').format(date),
       ),
     );
   }
 
-  String? _validateInput(DateTime? value) {
-    List<String>? validation = [];
-    if (inputControlItem.validation!.isNotEmpty) {
-      validation = inputControlItem.validation!.split(',');
+  DateTime? _parseDate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    try {
+      return DateFormat('dd/MM/yyyy').parseStrict(value.trim());
+    } on FormatException {
+      return DateTime.tryParse(value.trim());
     }
-    if (validation.contains('REQUIRED') && (value == null)) {
+  }
+
+  String? _validateInput(DateTime? value) {
+    final validation = inputControlItem.validation ?? '';
+    if (validation.split(',').contains('REQUIRED') && value == null) {
       return 'This field is required';
     }
     return null;

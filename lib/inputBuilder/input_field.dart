@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/models/ui/input_control_item.dart';
 import '../shared/style/app_style.dart';
+import '../shared/widgets/common_input_field.dart';
 
 class CustomTextInputField extends StatelessWidget {
   final InputControlItem inputControlItem;
@@ -29,11 +30,11 @@ class CustomTextInputField extends StatelessWidget {
       padding: (!kIsWeb)
           ? AppPadding().formInputPadding
           : AppPadding().webFormInputPadding,
-      child: TextFormField(
+      child: CommonInputField.formField(
         readOnly: inputControlItem.isFreeze ?? false,
         controller: controller,
         maxLines: inputControlItem.validation!.contains('MULTILINE') ? null : 1,
-        style: AppTextStyle.textFieldTextStyle(
+        textStyle: AppTextStyle.textFieldTextStyle(
           isFreeze: inputControlItem.isFreeze,
         ),
         textCapitalization: getCapitalization(inputControlItem.validation!),
@@ -43,7 +44,7 @@ class CustomTextInputField extends StatelessWidget {
                 ? 50
                 : 1000,
         keyboardType: getKeyboardType(inputControlItem.validation!),
-        decoration: AppInputDecoration.inputDecorationFormWithBorder(
+        decorationOverride: AppInputDecoration.inputDecorationFormWithBorder(
           labelText:
               '${inputControlItem.labelText ?? ''} ${validation.contains('REQUIRED') ? '*' : ''}',
           hintText:

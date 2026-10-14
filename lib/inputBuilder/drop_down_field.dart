@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/models/ui/input_control_item.dart';
 import '../shared/style/app_style.dart';
+import '../shared/widgets/common_dropdown_field.dart';
 
 class CustomDropDownField extends StatefulWidget {
   final InputControlItem inputControlItem;
@@ -45,37 +46,23 @@ class _CustomDropDownFieldState extends State<CustomDropDownField> {
               ? AppPadding().formInputPadding
               : AppPadding().webFormInputPadding
           : const EdgeInsets.all(0),
-      child: SizedBox(
-        // height: 7.65.h,
-        child: InputDecorator(
-          decoration: AppInputDecoration.inputDecorationFormWithBorder(
-            isFreeze: widget.inputControlItem.isFreeze!,
-            labelText:
-                '${widget.inputControlItem.labelText ?? ''} ${widget.inputControlItem.validation!.contains('REQUIRED') ? '*' : ''}',
-          ),
-          child: DropdownButton<dynamic>(
-            value: widget.selectedValue,
-            hint: Text(widget.inputControlItem.hintText ?? ''),
-            underline: Container(),
-            style: AppTextStyle.dropdownTextStyle(
-              isFreeze: widget.inputControlItem.isFreeze,
-            ),
-            icon: const Icon(Icons.keyboard_arrow_down),
-            iconEnabledColor: AppColors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 0),
-            isExpanded: true,
-            isDense: true,
-            onChanged: (value) {
-              widget.onChanged(value);
-            },
-            items: dropDownItems
-                .map((item) => DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item, style: const TextStyle(fontSize: 14)),
-                    ))
-                .toList(),
-          ),
-        ),
+      child: CommonDropdownField<String>(
+        value: widget.selectedValue?.toString(),
+        options: dropDownItems
+            .map((item) => CommonDropdownOption<String>(
+                  value: item,
+                  label: item,
+                ))
+            .toList(),
+        onChanged: (value) {
+          if (value != null) widget.onChanged(value);
+        },
+        labelText:
+            '${widget.inputControlItem.labelText ?? ''} ${widget.inputControlItem.validation!.contains('REQUIRED') ? '*' : ''}',
+        hintText: widget.inputControlItem.hintText,
+        readOnly: widget.inputControlItem.isFreeze ?? false,
+        radius: 12,
+        fillColor: AppColors.white1,
       ),
     );
   }
