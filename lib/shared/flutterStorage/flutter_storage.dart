@@ -15,7 +15,7 @@ class FlutterStorage {
     await _storage?.write(key: key, value: value);
   }
 
-  void deleteStorage(String key) async {
+  Future<void> deleteStorage(String key) async {
     await _storage?.delete(key: key);
   }
 
